@@ -591,6 +591,23 @@ begin
       Result := False;
       AValue := 0;
       Typ := dtNil;
+
+      if
+        (Str.CountChar(FormatSettings.DateSeparator) = 2) or
+        (Str.CountChar(FormatSettings.TimeSeparator) = 2)
+      then
+      begin
+        // Check the default values first
+        if TryStrToTime(Str, AValue) then
+          Typ := dtTime
+        else if TryStrToDate(Str, AValue) then
+          Typ := dtDate
+        else if TryStrToDateTime(Str, AValue) then
+          Typ := dtDateTime;
+        if Typ <> dtNil then
+          Exit(True);
+      end;
+
       if not Str.EndsWith(' ') then
       begin
         { there was a case of getting the value '21   ' and was considering as dtTime }
