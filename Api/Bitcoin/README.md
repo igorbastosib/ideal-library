@@ -19,6 +19,38 @@ Feel free to use the Demo/Api/Bitcoin/Alby project, which also has a step-by-ste
 Feel free to use the Demo/Api/Bitcoin/CoinOS project.<br />
 There is also a video demonstration on [Youtube](https://www.youtube.com/watch?v=l4bSgcR4Z5c) (subtitles available).<br />
 Awesome CoinOS, list of implemented solutions: [link](https://github.com/igorbastosib/awesome-coinos)<br />
+CoinOS server source (the live API): [git.coinos.io/coinos-server.git](https://git.coinos.io/coinos-server.git)<br />
+
+### Paying a Lightning address safely (trackable)
+
+`TAPICoinOS.PostPaymentLnAddress` pays a Lightning address in one call (`POST /send/:lnaddress/:amount`): CoinOS resolves the address, fetches the invoice and pays it, and you never see the invoice before money moves. If that call dies without an answer (timeout, restart, network), you cannot find out whether it paid, and calling it again may pay twice.
+
+When a payment must be tracked or retried, do the three steps yourself and keep the invoice:
+
+1. `TLnurlPay.Resolve(address)` then `TLnurlPay.FetchInvoice(request, amountMsat)` (unit `IdeaL.Lib.Api.Bitcoin.LnurlPay`). `FetchInvoice` refuses an invoice whose amount differs from the one you asked for.
+2. `TBolt11Decoder.Decode(invoice)` (unit `IdeaL.Lib.Bitcoin.Bolt11`): check `AmountMsat`, `Network = bnMainnet` and `IsExpired(now, margin)`. **Store the invoice** before paying.
+3. `TAPICoinOS.PostPayment(invoice, feeCap, memo, pin)`.
+4. After any doubt: `TAPICoinOS.GetPaymentState(invoice, record)`:
+   - `psPaid` → done.
+   - `psPending` → in flight (can take long with hold invoices); check again later, never pay again.
+   - `psNone` → no record: retry `PostPayment` with the **same** invoice while it has not expired.
+
+How to read errors of `PostPayment`:
+
+- `EIdeaLApiError` (has `StatusCode` and `ResponseBody`): CoinOS answered with an error ("Invalid pin", "Routing fee of X required", "Insufficient funds", "Invoice has already been paid"…). Nothing was debited by that attempt; fix the cause and retry with the same invoice.
+- Any exception for which `TIdeaLApi.IsTransportError(E)` is True: there was no answer. The payment may or may not have happened. Wait a couple of minutes (CoinOS itself can hold a payment call about 60 s), then call `GetPaymentState` before doing anything else.
+
+Why the same invoice is the safe retry: CoinOS refuses to pay an invoice that is already paid, being paid or still settling ("Invoice has already been paid", "Payment is already underway", "Previous attempt is still settling", "Invoice already paid"), and `GET /payments/:invoice` answers by invoice. A new invoice is a new payment that none of these protections cover: fetch a new one only after the old one has **expired** and `GetPaymentState` still says `psNone`.
+
+Rules of thumb:
+
+- Never run two `PostPayment` calls for the same invoice at the same time (CoinOS checks for duplicates before debiting, but not atomically).
+- `PostPayment` uses `PaymentTimeout` (default 90 s), above CoinOS's own ~60 s payment window.
+- `AFee` is a cap for the routing fee in sats; 0 lets CoinOS use its own quote. A cap below the quote, or above max(1000 sats, 5% of the amount), is refused before any debit. `PostLightningQuote` returns the quote.
+- `GET /payments/:invoice` is public: anyone holding the invoice can read the record. For an invoice of another CoinOS user it returns the **recipient's** record (positive amount, type `internal`), which still proves the payment.
+- `TLnurlPay` only talks to `https` hosts that resolve to public addresses and does not follow redirects (protection against SSRF); see the unit header for the details and limits.
+
+The demo `Demos/Api/Bitcoin/CoinOS` has a "Pay LN Address - 3 steps (trackable)" box that walks through this flow.
 
 ## [DePIX](https://docs.eulen.app/)
 
@@ -41,11 +73,20 @@ Initially built for rate and price check.<br />
 
 ## Compatibility Table
 
-| File | Delphi | Lazarus |<br />
-| ---- | ---- | ---- | ---- |<br />
-| Alby | &nbsp;&nbsp;&nbsp;✔️ | &nbsp;&nbsp;&nbsp;✔️ |<br />
-| CoinOS | &nbsp;&nbsp;&nbsp;✔️ | &nbsp;&nbsp;&nbsp;✔️ |<br />
-| Exchange | &nbsp;&nbsp;&nbsp;✔️ | &nbsp;&nbsp;&nbsp;✔️ |<br />
+Last verified on 2026-11-18 with Delphi 12 (dcc32/dcc64) and FPC 3.2.2 (i386-win32) by compiling each unit on its own; "tested" means the unit has automated tests under `Tests/` that pass on that compiler.
+
+| File | Delphi | Free Pascal / Lazarus |
+| ---- | ---- | ---- |
+| IdeaL.Lib.Api (base) | ✔️ compiles, tested | ✔️ compiles, tested |
+| CoinOS | ✔️ compiles, tested | ✔️ compiles, tested |
+| LnurlPay | ✔️ compiles, tested (Linux64: compiles) | ✔️ Windows compiles, tested; Unix branch not compiled |
+| Bolt11 | ✔️ compiles, tested | ✔️ compiles, tested |
+| Alby | ✔️ compiles | ❌ does not compile (missing imports: `InitSSLInterface`, `DateTimeToUnix`) |
+| DePIX | ✔️ compiles | ❌ does not compile (missing `InitSSLInterface`, qualifier errors) |
+| DIGPIX | ✔️ compiles | ❌ does not compile (missing `InitSSLInterface`) |
+| Exchange | ❌ does not compile (`FAuthToken` undeclared) | ✔️ compiles |
+
+The Lazarus demo (`Demos/Api/Bitcoin/CoinOS/FPC`) has not been rebuilt: Lazarus is not installed on the maintainer's machine.
 
 ## ⚠️ License
 

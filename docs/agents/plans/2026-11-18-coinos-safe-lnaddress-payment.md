@@ -2,7 +2,7 @@
 
 | Field | Value |
 | ---- | ---- |
-| Status | In progress — maintainer's answers recorded in §8.1 |
+| Status | In progress — S0–S6 done; S7 (live tests) waits for the test accounts, S8 (release) is the maintainer's |
 | Branch | `feature/coinos-safe-lnaddress-payment` |
 | Owner | Igor (maintainer) / Claude Code Opus 5.5 |
 | Created | 2026-11-18 |
@@ -346,3 +346,11 @@ Accounts: CoinOS **A** (payer, small balance), CoinOS **B** (recipient, internal
 ## 11. Progress log
 
 - 2026-11-18 — Repository synced check (fetch, 0/0), study of `TIdeaLApi`, `TAPICoinOS`, CoinOS demo (FMX and Lazarus); coinos-server `c0a0f5c` read (routes, payments, utils, db, auth); live probe of `GET /payments/:hash` and `GET /decode/:bolt11`; BOLT 11, LUD-06/12/16 read; Delphi 12 RTL checked; baseline Delphi build OK. Plan written. No library code changed yet.
+- 2026-11-18 — Maintainer's answers recorded (§8.1). FPC 3.2.2 compiler installed at `C:\FPC\3.2.2` (no Lazarus). Its installer also added `C:\FPC\3.2.2\bin\i386-Win32` to the machine PATH; the agent had no admin rights to remove it.
+- 2026-11-18 — S0 done: DUnitX runner + characterisation tests of the 0.0.6 base class, green on unchanged code (`9c8d1ec`).
+- 2026-11-18 — S1+S2 done (`8481b78`): BOLT 11 decoder; base class changes. F1 confirmed by compiling (FPC: `TNetHeaders` unknown) and fixed. New finding: WinHTTP does not always honour `ResponseTimeout` while waiting for headers (first request of a process waited the full server delay, with Indy and with a Python server); the base class now enforces a wall-clock deadline (connect + response timeout) through the async `THTTPClient` API, keeping the original exception classes. New finding F8: `IdeaL.Lib.Api.Bitcoin.Exchange.pas` does not compile on Delphi on `master` (`FAuthToken` undeclared), independent of this work.
+- 2026-11-18 — S3 done (`fbc7444`): CoinOS. Deviation from §7.2: `NormalizeInvoice` is implemented inside the CoinOS unit (no dependency on the Bolt11 unit) so that projects listing CoinOS by path do not need a new file. Added `BaseUrl` to make the unit testable.
+- 2026-11-18 — S4 done (`9706c9b`): LNURL-pay. Resolver replaceable (`OnResolveHost`) for tests.
+- 2026-11-18 — FPC parity tests (`ca24f4b`): 24 fpcunit tests, green.
+- 2026-11-18 — S5 done for the FMX demo (`31e723c`); Lazarus demo not updated (no LCL here).
+- 2026-11-18 — S6 done: READMEs, INDEX, AGENTS, CHANGELOG. Requester reply drafted at `C:\Temp` (outside the repository). Remaining: S7 live tests (waiting for accounts), S8 release, Lazarus demo.

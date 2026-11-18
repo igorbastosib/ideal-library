@@ -22,18 +22,29 @@ Map of the repository for agents. Descriptions of units not yet studied by an ag
 
 | Unit | Class | Delphi | FPC | Demo | Notes |
 | ---- | ---- | ---- | ---- | ---- | ---- |
-| `Api/IdeaL.Lib.Api.pas` | `TIdeaLApi` | ✔ | declared, **probably broken** | — | Base class: shared `Get`/`Post` over `THTTPClient` (Delphi) / `TFPHttpClient` (FPC). Since 2025-11-19 (`47749c9`) its FPC branch uses `TNetHeaders` and keeps `Post` inside the Delphi-only block, so FPC likely does not compile. Not verified: no FPC installed. |
-| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.CoinOS.pas` | `TAPICoinOS` | ✔ (compiled 2026-11-18, Delphi 12) | branches exist, inline `var` outside `{$IFDEF}` breaks FPC | `Demos/Api/Bitcoin/CoinOS` (FMX) and `.../CoinOS/FPC` (Lazarus) | CoinOS custodial Lightning wallet API (`https://coinos.io/api`). Server source: `https://git.coinos.io/coinos-server.git`. See plan `2026-11-18-coinos-safe-lnaddress-payment.md`. |
-| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.Alby.pas` | `TAPIAlby` | ✔ | branches exist | `Demos/Api/Bitcoin/Alby` | Alby wallet API with a fixed access token. |
-| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.DePIX.pas` | `TAPIDePix` | ✔ | fixed in `1ab88b8` | `Demos/Api/Bitcoin/DePIX` | Eulen Pix2DePix API. |
-| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.DIGPIX.pas` | `TAPIDigPix` | ✔ | ? | `Demos/Api/Bitcoin/DIGPIX` | VemPraDig / DIGPIX. **Encoding: Windows-1252.** |
-| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.Exchange.pas` | `TAPIExchange` | ✔ | branches exist | — | Public price/rate APIs (uses CoinOS `/rates` among others). |
+| `Api/IdeaL.Lib.Api.pas` | `TIdeaLApi`, `EIdeaLApiError` | ✔ tested | ✔ tested | — | Base class: `Get`/`Post` (old signatures + overloads with connect/response timeouts), any 2xx is success, `EIdeaLApiError` when the server answered with an error, `IsTransportError` for "no answer", `FollowRedirects`. Delphi enforces a wall-clock deadline (WinHTTP ignores `ResponseTimeout` before headers). FPC build fixed in 0.0.7. |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.CoinOS.pas` | `TAPICoinOS` | ✔ tested | ✔ tested | `Demos/Api/Bitcoin/CoinOS` (FMX, updated) and `.../CoinOS/FPC` (Lazarus, not updated) | CoinOS custodial Lightning wallet API (`https://coinos.io/api`). Server source: `https://git.coinos.io/coinos-server.git`. `PostPayment` (fee/memo/pin), `GetPayment`, `GetPaymentState`, `BaseUrl`, `PaymentTimeout`. See plan `2026-11-18-coinos-safe-lnaddress-payment.md`. |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.LnurlPay.pas` | `TLnurlPay` | ✔ tested (Linux64 compiles) | ✔ Windows tested; Unix branch not compiled | CoinOS demo, "3 steps" box | LNURL-pay client (LUD-06/12/16) with amount check and SSRF guard (https only, public IPs only, no redirects). Wallet independent. |
+| `Api/Bitcoin/IdeaL.Lib.Bitcoin.Bolt11.pas` | `TBolt11Decoder`, `TBolt11` | ✔ tested | ✔ tested | CoinOS demo | Pure BOLT 11 decoder (no network, no signature check) with portable SHA-256. |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.Alby.pas` | `TAPIAlby` | ✔ | ❌ pre-existing errors | `Demos/Api/Bitcoin/Alby` | Alby wallet API with a fixed access token. |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.DePIX.pas` | `TAPIDePix` | ✔ | ❌ pre-existing errors | `Demos/Api/Bitcoin/DePIX` | Eulen Pix2DePix API. |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.DIGPIX.pas` | `TAPIDigPix` | ✔ | ❌ pre-existing errors | `Demos/Api/Bitcoin/DIGPIX` | VemPraDig / DIGPIX. **Encoding: Windows-1252.** |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.Exchange.pas` | `TAPIExchange` | ❌ pre-existing error (`FAuthToken`) | ✔ | — | Public price/rate APIs (uses CoinOS `/rates` among others). |
 | `Api/Bitcoin/README.md` | — | — | — | — | User-facing doc of the Bitcoin integrations, with a Delphi/Lazarus compatibility table. |
 | `Api/IdeaL.Lib.Api.DropBox.pas`, `Api/IdeaL.Lib.Download.DropBox.pas` | — | ✔ | — | `Demos/Api/DropBox/*` | DropBox API and downloads. |
 | `Api/IdeaL.Lib.Api.Image.ImgBB.pas` | `TImgBBApi` | ✔ | — | `Demos/Api/Image-ImgBB` | ImgBB image upload. |
 | `Api/IdeaL.Lib.Api.ReceitaWs.pas` | — | ✔ | — | `Demos/Api/ReceitaWs` | Brazilian CNPJ lookup (ReceitaWS). |
 
-Planned (not yet created) by the CoinOS plan: `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.LnurlPay.pas` (LUD-06/16 client) and `Api/Bitcoin/IdeaL.Lib.Bitcoin.Bolt11.pas` (pure BOLT 11 decoder), plus a `Tests/` folder.
+## Tests/
+
+| Path | What it is |
+| ---- | ---- |
+| `Tests/Delphi/IdeaLLibTests.dpr`, `run-tests.ps1` | DUnitX console runner (Win64) and its build/run script. |
+| `Tests/Delphi/Test.LocalHttpServer.pas` | Indy HTTP server on 127.0.0.1 with scripted answers; records the last request. |
+| `Tests/Delphi/Test.IdeaL.Lib.Api.Compat.pas` | Characterisation of the 0.0.6 `TIdeaLApi` behaviour (must stay green). |
+| `Tests/Delphi/Test.IdeaL.Lib.Api.pas`, `Test.IdeaL.Lib.Api.Bitcoin.CoinOS.pas`, `Test.IdeaL.Lib.Bitcoin.Bolt11.pas`, `Test.IdeaL.Lib.Api.Bitcoin.LnurlPay.pas` | Unit tests of the base class, CoinOS (requests of every method pinned), BOLT 11 and LNURL-pay. |
+| `Tests/FPC/IdeaLLibTestsFpc.lpr`, `run-tests-fpc.ps1`, `TestServerFpc.pas`, `TestIdeaLLibFpc.pas` | fpcunit runner for the FPC branches, with an fcl-web HTTP server on 127.0.0.1. |
+| `Tests/Shared/Bolt11Vectors.pas` | BOLT 11 spec test vectors, generated from the spec, shared by both runners. |
 
 ## Root units *(name only unless stated)*
 
@@ -61,6 +72,6 @@ Planned (not yet created) by the CoinOS plan: `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin
 | File | Notes |
 | ---- | ---- |
 | `Demos/Api/Bitcoin/CoinOS/Project1.dpr` / `.dproj` | FMX project; references `IdeaL.Lib.Utils`, `IdeaL.Lib.Api`, `IdeaL.Lib.Api.Bitcoin.CoinOS` by relative path. New library units must be added here and in the `.dproj`. |
-| `Demos/Api/Bitcoin/CoinOS/Unit1.pas` / `.fmx` | One form, `TabControl` with Demo/Info tabs. Group boxes: account (register/login/x-api-key), profile, LN invoice create/check, pay invoice (`PostPayment`), pay LN address (`PostPaymentLnAddress`), payments list, rates. Results go to a list box (raw JSON) and a log memo. Credentials are saved to `config.json` next to the exe (ignored by git). |
+| `Demos/Api/Bitcoin/CoinOS/Unit1.pas` / `.fmx` | One form, `TabControl` with Demo/Info tabs. Group boxes: account (register/login/x-api-key), profile, LN invoice create/check, pay invoice (`PostPayment` with fee cap, memo, PIN, and a Check button), pay LN address in one call (`PostPaymentLnAddress`, PIN), payments list, rates, and "Pay LN Address - 3 steps (trackable)" (Resolve, Fetch invoice, Pay, Check status). Results go to a list box (raw JSON) and a log memo. Credentials and the pending invoice are saved to `config.json` next to the exe (ignored by git); the PIN is never saved. The `.fmx` was edited by script (ASCII, CRLF kept); open it in the IDE to adjust the layout. |
 | `Demos/Api/Bitcoin/CoinOS/FPC/` | Lazarus version of the same demo (`project1.lpr`, `fpcunit2.pas/.lfm`). Last changed 2025-02; predates the `TIdeaLApi` refactor. |
 | `Demos/Api/Bitcoin/CoinOS/AuthToken.jpg` | Screenshot showing where to find the CoinOS token. |

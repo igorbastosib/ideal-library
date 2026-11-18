@@ -67,7 +67,7 @@ git diff --stat                    # a one-line change must not show the whole f
 
 - Units with `{$IFDEF FPC}` branches promise the same behaviour on both compilers. A behaviour change must touch both branches, or the commit and the CHANGELOG must say clearly that the FPC branch was not changed.
 - Code outside `{$IFNDEF FPC}` / `{$ELSE}` blocks must compile on FPC (`{$mode objfpc}{$H+}`): no inline `var`, no `for var`, no type inference, no `System.*` unit names, no `TNetHeaders`/`TNameValuePair` unless the unit defines them for FPC.
-- FPC/Lazarus is **not installed** on the maintainer's machine (as of 2026-11-18). If you cannot compile the FPC branch, write "FPC branch not compiled" in the commit body and in the CHANGELOG entry. Never claim FPC compatibility you did not verify.
+- The FPC compiler is installed (see §9), Lazarus is not. If you cannot compile a branch (FPC Unix, Lazarus/LCL), write so in the commit body and in the CHANGELOG entry. Never claim compatibility you did not verify.
 - The compatibility table in `Api/Bitcoin/README.md` must reflect reality.
 
 ## 7. Code conventions (as observed in the code base)
@@ -96,7 +96,18 @@ git diff --stat                    # a one-line change must not show the whole f
   ```
 
   Output (`.dcu`, `.exe`) goes to the scratch folder, never into the repository.
-- After touching `TIdeaLApi`, compile every unit that derives from it: CoinOS, Alby, DePIX, DIGPIX, Exchange, ImgBB.
+- Free Pascal 3.2.2 (compiler only, no Lazarus) is installed at `C:\FPC\3.2.2` and called by full path: `C:\FPC\3.2.2\bin\i386-win32\fpc.exe`. LCL projects (the Lazarus demo) cannot be built on this machine.
+- Automated tests (no network; HTTP tests use an in-process server on 127.0.0.1):
+
+  ```
+  powershell -ExecutionPolicy Bypass -File Tests\Delphi\run-tests.ps1 -OutDir <scratch>\tests64
+  powershell -ExecutionPolicy Bypass -File Tests\FPC\run-tests-fpc.ps1 -OutDir <scratch>\fpctests
+  ```
+
+  `Tests/Delphi` is a DUnitX console project (Win64; DUnitX ships only for Win64 in this RAD Studio). `Tests/Delphi/Test.IdeaL.Lib.Api.Compat.pas` pins the 0.0.6 behaviour of `TIdeaLApi` that other projects depend on: it must stay green. `Tests/FPC` is an fpcunit runner mirroring the Delphi tests for units with FPC branches. Shared fixtures (BOLT 11 spec vectors) live in `Tests/Shared`.
+- Call `dcc32`/`dcc64`/`fpc` from PowerShell, or from Git Bash only with relative paths: Git Bash rewrites `-N0C:/...`-style arguments into broken paths.
+- After touching `TIdeaLApi`, compile every unit that derives from it: CoinOS, Alby, DePIX, DIGPIX, Exchange, ImgBB, LnurlPay. Known pre-existing failures (2026-11-18): Exchange does not compile on Delphi (`FAuthToken` undeclared); Alby, DePIX and DIGPIX do not compile on FPC. See `Api/Bitcoin/README.md`, compatibility table.
+- On Windows, `THTTPClient.ResponseTimeout` is not always honoured while the server has not sent the headers yet; `TIdeaLApi` enforces a wall-clock deadline itself. Do not remove it.
 - Report the result honestly: compiled / not compiled / tests passed / tests not run.
 
 ## 10. Documentation duties for every change
