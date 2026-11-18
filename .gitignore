@@ -102,3 +102,7 @@ Demos/PushNotification/Mobile/11/Mobile11.res
 Demos/SelfUpdate/D11/AndroidManifest.template.xml
 Demos/TabControl/D11/AndroidManifest.template.xml
 
+
+# Test output (ideal-library tests)
+Tests/Delphi/Win64/
+Tests/FPC/lib/
