@@ -2,7 +2,7 @@
 
 | Field | Value |
 | ---- | ---- |
-| Status | Draft — waiting for the maintainer's answers in §8 |
+| Status | In progress — maintainer's answers recorded in §8.1 |
 | Branch | `feature/coinos-safe-lnaddress-payment` |
 | Owner | Igor (maintainer) / Claude Code Opus 5.5 |
 | Created | 2026-11-18 |
@@ -279,6 +279,18 @@ type
 | Q8 | Real-money tests (§9.3): which accounts/wallets, and the total budget per run? | Two CoinOS test accounts + one external wallet; ≤ 100 sats per payment, ≤ 2 000 sats per run; you approve each run. |
 | Q9 | Release: bump `boss.json` to `0.0.7` in the final commit and you tag/push where Boss users pull (GitHub mirror and/or Bitbucket)? | Yes; agents never push. |
 | Q10 | Should we answer the requester with the corrections from §3–§5 (fact 5 returns `null`, LUD-06 no longer requires the `h` check, Delphi 12 default timeouts are 60 s, `s` is mandatory in BOLT 11, the `fee: 0` bug in `PostPaymentLnAddress`)? | Yes — a short reply text can be drafted into this folder for you to send. |
+
+### 8.1 Maintainer's answers (2026-11-18)
+
+| # | Decision |
+| ---- | ---- |
+| Q1, Q5, Q7, Q9 | Recommendations accepted. |
+| Q2 | **DUnitX** for the Delphi tests, with isolated characterisation tests of the base class first, so that changes to `TIdeaLApi` cannot regress other projects. FPC side: an `fpcunit` console runner (ships with FPC) for the units that have FPC branches. |
+| Q3 | Look for a Delphi-integrated FPC first (the maintainer remembered a German product). Found: **CrossFPC** (Simon Kissel, crossfpc.com) — last release targets Delphi 7 … 10.1 Berlin, unmaintained, not usable with Delphi 12. `fpcfordelphi` (SourceForge) is an unrelated 2014 alpha. No maintained Delphi-IDE FPC plug-in found. Decision: install only the official **FPC 3.2.2** compiler (no Lazarus) at `C:\FPC\3.2.2`; installer verified against the SourceForge SHA1/MD5. Consequence: library units and console tests can be compiled with FPC; the Lazarus demo (LCL) cannot be compiled on this machine. |
+| Q4 | Adjusted after the maintainer's regression concern: transport failures keep their **native** exception classes (wrapping them would break existing `except on ENetHTTPClientException` handlers). Instead `TIdeaLApi.IsTransportError(E)` tells "no answer" from "error answer"; `EIdeaLApiError` is only raised when the server answered. |
+| Q6 | Timeouts as **overloads**: the existing `Get`/`Post` signatures stay (still `virtual`) and delegate to new overloads that take `AConnectTimeout`/`AResponseTimeout`, passing 60 000 ms (Delphi 12's current default), so there is one implementation and existing behaviour is unchanged. CoinOS payments call the overload with 90 000 ms, LNURL with 10 000/20 000 ms. |
+| Q8 | Accepted (≤ 100 sats per payment, ≤ 2 000 sats per run). The maintainer will create the accounts and share them when the live tests start; the token will be stored encrypted by the CoinOS demo, so the agent will have to decrypt it with the library's own routine. |
+| Q10 | Reply to the requester drafted **outside the repository** at `C:\Temp` (the original request was never stored in the repository). |
 
 ## 9. Implementation steps
 

@@ -16,7 +16,11 @@ uses
   DUnitX.Loggers.XML.NUnit,
   Test.LocalHttpServer in 'Test.LocalHttpServer.pas',
   Test.IdeaL.Lib.Api.Compat in 'Test.IdeaL.Lib.Api.Compat.pas',
-  IdeaL.Lib.Api in '..\..\Api\IdeaL.Lib.Api.pas';
+  Test.IdeaL.Lib.Api in 'Test.IdeaL.Lib.Api.pas',
+  Test.IdeaL.Lib.Bitcoin.Bolt11 in 'Test.IdeaL.Lib.Bitcoin.Bolt11.pas',
+  Bolt11Vectors in '..\Shared\Bolt11Vectors.pas',
+  IdeaL.Lib.Api in '..\..\Api\IdeaL.Lib.Api.pas',
+  IdeaL.Lib.Bitcoin.Bolt11 in '..\..\Api\Bitcoin\IdeaL.Lib.Bitcoin.Bolt11.pas';
 
 var
   LRunner: ITestRunner;
