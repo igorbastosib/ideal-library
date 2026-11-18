@@ -259,6 +259,8 @@
         <DCCReference Include="..\..\..\..\IdeaL.Lib.Utils.pas"/>
         <DCCReference Include="..\..\..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.CoinOS.pas"/>
         <DCCReference Include="..\..\..\..\Api\IdeaL.Lib.Api.pas"/>
+        <DCCReference Include="..\..\..\..\Api\Bitcoin\IdeaL.Lib.Bitcoin.Bolt11.pas"/>
+        <DCCReference Include="..\..\..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.LnurlPay.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

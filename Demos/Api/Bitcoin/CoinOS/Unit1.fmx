@@ -2,7 +2,7 @@ object Form1: TForm1
   Left = 0
   Top = 0
   Caption = 'Form1'
-  ClientHeight = 618
+  ClientHeight = 780
   ClientWidth = 1112
   Position = ScreenCenter
   WindowState = wsMaximized
@@ -159,7 +159,7 @@ object Form1: TForm1
       end
       object lbxJson: TListBox
         Align = Left
-        Position.Y = 394.000000000000000000
+        Position.Y = 574.000000000000000000
         Size.Width = 200.000000000000000000
         Size.Height = 91.000000000000000000
         Size.PlatformDefault = False
@@ -227,18 +227,18 @@ object Form1: TForm1
         Align = Top
         Position.Y = 229.000000000000000000
         Size.Width = 883.000000000000000000
-        Size.Height = 165.000000000000000000
+        Size.Height = 195.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 5
         Viewport.Width = 883.000000000000000000
-        Viewport.Height = 149.000000000000000000
+        Viewport.Height = 179.000000000000000000
         object gbxPayLnInvoice: TGroupBox
           Align = Left
           Position.X = 610.000000000000000000
           Size.Width = 305.000000000000000000
-          Size.Height = 149.000000000000000000
+          Size.Height = 179.000000000000000000
           Size.PlatformDefault = False
-          Text = 'Pay LN Invoice   '
+          Text = 'Pay LN Invoice (POST /payments)'
           TabOrder = 4
           object Label12: TLabel
             Align = Top
@@ -297,7 +297,7 @@ object Form1: TForm1
             Size.Height = 16.000000000000000000
             Size.PlatformDefault = False
             TextSettings.WordWrap = False
-            Text = 'Max Fee'
+            Text = 'Fee cap'
             TabOrder = 38
             TabStop = False
             OnClick = lblGetInvoiceClick
@@ -306,19 +306,19 @@ object Form1: TForm1
             Touch.InteractiveGestures = [LongTap, DoubleTap]
             TabOrder = 0
             FilterChar = '0123456789'
-            Text = '1'
+            Text = '0'
             TextSettings.HorzAlign = Center
             Position.X = 70.000000000000000000
             Position.Y = 88.000000000000000000
-            Size.Width = 100.000000000000000000
+            Size.Width = 50.000000000000000000
             Size.Height = 22.000000000000000000
             Size.PlatformDefault = False
             OnTyping = edtExportedTokenTyping
           end
           object btnPay: TButton
-            Position.X = 178.000000000000000000
-            Position.Y = 88.000000000000000000
-            Size.Width = 100.000000000000000000
+            Position.X = 128.000000000000000000
+            Position.Y = 118.000000000000000000
+            Size.Width = 72.000000000000000000
             Size.Height = 22.000000000000000000
             Size.PlatformDefault = False
             TabOrder = 42
@@ -337,7 +337,7 @@ object Form1: TForm1
             Margins.Right = 10.000000000000000000
             Margins.Bottom = 10.000000000000000000
             Position.X = 14.000000000000000000
-            Position.Y = 113.000000000000000000
+            Position.Y = 150.000000000000000000
             Size.Width = 31.000000000000000000
             Size.Height = 15.000000000000000000
             Size.PlatformDefault = False
@@ -351,12 +351,66 @@ object Form1: TForm1
             TabStop = False
             OnClick = Label17Click
           end
+          object lblPayMemo: TLabel
+            AutoSize = True
+            Position.X = 128.000000000000000000
+            Position.Y = 91.000000000000000000
+            Size.Width = 28.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.WordWrap = False
+            Text = 'Memo'
+            TabOrder = 40
+            TabStop = False
+          end
+          object edtPayMemo: TEdit
+            Touch.InteractiveGestures = [LongTap, DoubleTap]
+            TabOrder = 5
+            Position.X = 165.000000000000000000
+            Position.Y = 88.000000000000000000
+            Size.Width = 113.000000000000000000
+            Size.Height = 22.000000000000000000
+            Size.PlatformDefault = False
+          end
+          object lblPayPin: TLabel
+            AutoSize = True
+            Position.X = 8.000000000000000000
+            Position.Y = 121.000000000000000000
+            Size.Width = 21.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.WordWrap = False
+            Text = 'PIN'
+            TabOrder = 41
+            TabStop = False
+          end
+          object edtPayPin: TEdit
+            Touch.InteractiveGestures = [LongTap, DoubleTap]
+            TabOrder = 6
+            Password = True
+            Position.X = 70.000000000000000000
+            Position.Y = 118.000000000000000000
+            Size.Width = 50.000000000000000000
+            Size.Height = 22.000000000000000000
+            Size.PlatformDefault = False
+          end
+          object btnCheckPayment: TButton
+            Position.X = 206.000000000000000000
+            Position.Y = 118.000000000000000000
+            Size.Width = 72.000000000000000000
+            Size.Height = 22.000000000000000000
+            Size.PlatformDefault = False
+            TabOrder = 43
+            Text = 'Check'
+            TextSettings.Trimming = None
+            OnClick = btnCheckPaymentClick
+          end
         end
         object gbxLnInvoiceCreate: TGroupBox
           Align = Left
           Position.X = 305.000000000000000000
           Size.Width = 305.000000000000000000
-          Size.Height = 149.000000000000000000
+          Size.Height = 179.000000000000000000
           Size.PlatformDefault = False
           Text = 'Lightning Invoice   '
           TabOrder = 1
@@ -495,7 +549,7 @@ object Form1: TForm1
         object gbxProfile: TGroupBox
           Align = Left
           Size.Width = 305.000000000000000000
-          Size.Height = 149.000000000000000000
+          Size.Height = 179.000000000000000000
           Size.PlatformDefault = False
           Text = 'Profile   '
           TabOrder = 0
@@ -628,7 +682,7 @@ object Form1: TForm1
           Align = Left
           Position.X = 1220.000000000000000000
           Size.Width = 305.000000000000000000
-          Size.Height = 149.000000000000000000
+          Size.Height = 179.000000000000000000
           Size.PlatformDefault = False
           Text = 'Payment history   '
           TabOrder = 2
@@ -755,9 +809,9 @@ object Form1: TForm1
           Align = Left
           Position.X = 915.000000000000000000
           Size.Width = 305.000000000000000000
-          Size.Height = 149.000000000000000000
+          Size.Height = 179.000000000000000000
           Size.PlatformDefault = False
-          Text = 'Pay LN Address'
+          Text = 'Pay LN Address (one call, no tracking)'
           TabOrder = 3
           object Label32: TLabel
             Align = Top
@@ -900,6 +954,230 @@ object Form1: TForm1
             TabStop = False
             OnClick = Label17Click
           end
+          object lblPayLnAddressPin: TLabel
+            AutoSize = True
+            Position.X = 10.000000000000000000
+            Position.Y = 150.000000000000000000
+            Size.Width = 21.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.WordWrap = False
+            Text = 'PIN'
+            TabOrder = 40
+            TabStop = False
+          end
+          object edtPayLnAddressPin: TEdit
+            Touch.InteractiveGestures = [LongTap, DoubleTap]
+            TabOrder = 5
+            Password = True
+            Position.X = 85.000000000000000000
+            Position.Y = 148.000000000000000000
+            Size.Width = 85.000000000000000000
+            Size.Height = 22.000000000000000000
+            Size.PlatformDefault = False
+          end
+        end
+      end
+      object gbxSafeLnAddress: TGroupBox
+        Align = Top
+        Position.Y = 424.000000000000000000
+        Size.Width = 883.000000000000000000
+        Size.Height = 150.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Pay LN Address - 3 steps (trackable): LNURL-pay, BOLT 11 check, POST /payments, GET /payments/:invoice'
+        TabOrder = 6
+        object lblSafeHelp: TLabel
+          Align = Top
+          StyledSettings = [Family]
+          Margins.Left = 10.000000000000000000
+          Margins.Top = 18.000000000000000000
+          Margins.Right = 10.000000000000000000
+          Position.X = 10.000000000000000000
+          Position.Y = 18.000000000000000000
+          Size.Width = 863.000000000000000000
+          Size.Height = 17.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.Font.Size = 11.000000000000000000
+          TextSettings.FontColor = claRed
+          Text = 'The invoice is saved before paying. After a failure without answer press 4 - never fetch a new invoice while the old one may still be paid.'
+          TabOrder = 0
+          TabStop = False
+        end
+        object lblSafeAddress: TLabel
+          AutoSize = True
+          Position.X = 8.000000000000000000
+          Position.Y = 51.000000000000000000
+          Size.Width = 84.000000000000000000
+          Size.Height = 16.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.WordWrap = False
+          Text = 'LN Address *'
+          TabOrder = 20
+          TabStop = False
+        end
+        object edtSafeAddress: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 1
+          Position.X = 85.000000000000000000
+          Position.Y = 48.000000000000000000
+          Size.Width = 170.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+        end
+        object lblSafeAmount: TLabel
+          AutoSize = True
+          Position.X = 262.000000000000000000
+          Position.Y = 51.000000000000000000
+          Size.Width = 42.000000000000000000
+          Size.Height = 16.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.WordWrap = False
+          Text = 'Sats *'
+          TabOrder = 21
+          TabStop = False
+        end
+        object edtSafeAmount: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 2
+          FilterChar = '0123456789'
+          Text = '21'
+          TextSettings.HorzAlign = Center
+          Position.X = 300.000000000000000000
+          Position.Y = 48.000000000000000000
+          Size.Width = 60.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+        end
+        object lblSafeComment: TLabel
+          AutoSize = True
+          Position.X = 368.000000000000000000
+          Position.Y = 51.000000000000000000
+          Size.Width = 49.000000000000000000
+          Size.Height = 16.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.WordWrap = False
+          Text = 'Comment'
+          TabOrder = 22
+          TabStop = False
+        end
+        object edtSafeComment: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 3
+          Position.X = 425.000000000000000000
+          Position.Y = 48.000000000000000000
+          Size.Width = 140.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+        end
+        object lblSafeFee: TLabel
+          AutoSize = True
+          Position.X = 573.000000000000000000
+          Position.Y = 51.000000000000000000
+          Size.Width = 49.000000000000000000
+          Size.Height = 16.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.WordWrap = False
+          Text = 'Fee cap'
+          TabOrder = 23
+          TabStop = False
+        end
+        object edtSafeFee: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 4
+          FilterChar = '0123456789'
+          Text = '0'
+          TextSettings.HorzAlign = Center
+          Position.X = 622.000000000000000000
+          Position.Y = 48.000000000000000000
+          Size.Width = 45.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+        end
+        object lblSafePin: TLabel
+          AutoSize = True
+          Position.X = 675.000000000000000000
+          Position.Y = 51.000000000000000000
+          Size.Width = 21.000000000000000000
+          Size.Height = 16.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.WordWrap = False
+          Text = 'PIN'
+          TabOrder = 24
+          TabStop = False
+        end
+        object edtSafePin: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 5
+          Password = True
+          Position.X = 700.000000000000000000
+          Position.Y = 48.000000000000000000
+          Size.Width = 70.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+        end
+        object btnSafeResolve: TButton
+          Position.X = 8.000000000000000000
+          Position.Y = 78.000000000000000000
+          Size.Width = 90.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 6
+          Text = '1. Resolve'
+          TextSettings.Trimming = None
+          OnClick = btnSafeResolveClick
+        end
+        object btnSafeFetch: TButton
+          Position.X = 102.000000000000000000
+          Position.Y = 78.000000000000000000
+          Size.Width = 110.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 7
+          Text = '2. Fetch invoice'
+          TextSettings.Trimming = None
+          OnClick = btnSafeFetchClick
+        end
+        object btnSafePay: TButton
+          Position.X = 216.000000000000000000
+          Position.Y = 78.000000000000000000
+          Size.Width = 80.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 8
+          Text = '3. Pay'
+          TextSettings.Trimming = None
+          OnClick = btnSafePayClick
+        end
+        object btnSafeCheck: TButton
+          Position.X = 300.000000000000000000
+          Position.Y = 78.000000000000000000
+          Size.Width = 100.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 9
+          Text = '4. Check status'
+          TextSettings.Trimming = None
+          OnClick = btnSafeCheckClick
+        end
+        object chkSafeSimulateTimeout: TCheckBox
+          Position.X = 410.000000000000000000
+          Position.Y = 80.000000000000000000
+          Size.Width = 260.000000000000000000
+          Size.Height = 19.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 10
+          Text = 'Simulate timeout (payment timeout 1 s)'
+        end
+        object lblSafeInfo: TLabel
+          Position.X = 8.000000000000000000
+          Position.Y = 106.000000000000000000
+          Size.Width = 865.000000000000000000
+          Size.Height = 40.000000000000000000
+          Size.PlatformDefault = False
+          TextSettings.VertAlign = Leading
+          Text = 'Step 1: resolve the address.'
+          TabOrder = 11
+          TabStop = False
         end
       end
       object lytToken: TLayout
