@@ -19,10 +19,12 @@ uses
   Test.IdeaL.Lib.Api in 'Test.IdeaL.Lib.Api.pas',
   Test.IdeaL.Lib.Bitcoin.Bolt11 in 'Test.IdeaL.Lib.Bitcoin.Bolt11.pas',
   Test.IdeaL.Lib.Api.Bitcoin.CoinOS in 'Test.IdeaL.Lib.Api.Bitcoin.CoinOS.pas',
+  Test.IdeaL.Lib.Api.Bitcoin.LnurlPay in 'Test.IdeaL.Lib.Api.Bitcoin.LnurlPay.pas',
   Bolt11Vectors in '..\Shared\Bolt11Vectors.pas',
   IdeaL.Lib.Api in '..\..\Api\IdeaL.Lib.Api.pas',
   IdeaL.Lib.Bitcoin.Bolt11 in '..\..\Api\Bitcoin\IdeaL.Lib.Bitcoin.Bolt11.pas',
-  IdeaL.Lib.Api.Bitcoin.CoinOS in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.CoinOS.pas';
+  IdeaL.Lib.Api.Bitcoin.CoinOS in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.CoinOS.pas',
+  IdeaL.Lib.Api.Bitcoin.LnurlPay in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.LnurlPay.pas';
 
 var
   LRunner: ITestRunner;
