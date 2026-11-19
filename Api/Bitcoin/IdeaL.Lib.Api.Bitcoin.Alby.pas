@@ -1,5 +1,9 @@
 unit IdeaL.Lib.Api.Bitcoin.Alby;
 
+{$IFDEF FPC}
+{$mode objfpc}{$H+}
+{$ENDIF}
+
 interface
 
 uses
@@ -130,6 +134,25 @@ type
 
 implementation
 
+{$IFDEF FPC}
+uses
+  DateUtils,
+  openssl, { This implements the procedure InitSSLInterface }
+  opensslsockets;
+{$ENDIF}
+
+{$IFDEF FPC}
+{ Error message in the format of the Delphi branch: "<code> <text>", plus
+  " - <body>" when AWithBody is True and the body is not blank. }
+function FpcErrorMessage(AHttpClient: TFPHttpClient; const ABody: string;
+  AWithBody: Boolean): string;
+begin
+  Result := IntToStr(AHttpClient.ResponseStatusCode) + ' ' + AHttpClient.ResponseStatusText;
+  if AWithBody and (Trim(ABody) <> '') then
+    Result := Result + ' - ' + ABody;
+end;
+{$ENDIF}
+
 { TAPIAlby }
 
 function TAPIAlby.AuthToken: string;
@@ -141,7 +164,7 @@ function TAPIAlby.Del(AUrl: string): string;
 {$IFDEF FPC}
 var
   LHttpClient: TFPHttpClient;
-  LResponse : TStringList;
+  LResponse : TStringStream;
 {$ELSE}
 var
   LHttp: THTTPClient;
@@ -152,12 +175,14 @@ begin
   InitSSLInterface;
   GetNetHttpRequestLocal(LHttpClient);
   try
-    LResponse := TStringList.Create;
+    LResponse := TStringStream.Create('');
     try
-      LHttpClient.Delete(AUrl, LResponse);
+      // [] = TFPHttpClient does not check the status itself (its Get accepts
+      // only 200): the check below decides, as in the Delphi branch
+      LHttpClient.HTTPMethod('DELETE', AUrl, LResponse, []);
       if (LHttpClient.ResponseStatusCode < 200) or (LHttpClient.ResponseStatusCode > 299) then
-        raise exception.create(LHttpClient.ResponseStatusText);
-      Result := LResponse.Text;
+        raise Exception.Create(FpcErrorMessage(LHttpClient, LResponse.DataString, False));
+      Result := LResponse.DataString;
     finally
       LResponse.Free;
     end;
@@ -199,7 +224,7 @@ function TAPIAlby.Get(AUrl: string): string;
 {$IFDEF FPC}
 var
   LHttpClient: TFPHttpClient;
-  LResponse : TStringList;
+  LResponse : TStringStream;
 {$ELSE}
 var
   LHttp: THTTPClient;
@@ -210,12 +235,14 @@ begin
   InitSSLInterface;
   GetNetHttpRequestLocal(LHttpClient);
   try
-    LResponse := TStringList.Create;
+    LResponse := TStringStream.Create('');
     try
-      LHttpClient.Get(AUrl, LResponse);
+      // [] = TFPHttpClient does not check the status itself (its Get accepts
+      // only 200): the check below decides, as in the Delphi branch
+      LHttpClient.HTTPMethod('GET', AUrl, LResponse, []);
       if (LHttpClient.ResponseStatusCode < 200) or (LHttpClient.ResponseStatusCode > 299) then
-        raise exception.create(LHttpClient.ResponseStatusText);
-      Result := LResponse.Text;
+        raise Exception.Create(FpcErrorMessage(LHttpClient, LResponse.DataString, False));
+      Result := LResponse.DataString;
     finally
       LResponse.Free;
     end;
@@ -325,6 +352,8 @@ begin
   ANetHttpClient.CustomHeaders['Accept'] := ANetHttpClient.Accept;
   ANetHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + FAuthToken;
 end;
+{$ENDIF}
+
 function TAPIAlby.GetValue4Value: string;
 var
   LUrl: string;
@@ -345,7 +374,7 @@ function TAPIAlby.Post(AUrl, ABody: string): string;
 {$IFDEF FPC}
 var
   LHttpClient: TFPHttpClient;
-  LResponse : TStringList;
+  LResponse : TStringStream;
 {$ELSE}
 var
   LHttp: THTTPClient;
@@ -356,13 +385,15 @@ begin
   InitSSLInterface;
   GetNetHttpRequestLocal(LHttpClient);
   try
-    LResponse := TStringList.Create;
+    LResponse := TStringStream.Create('');
     LHttpClient.RequestBody := TRawByteStringStream.Create(ABody);
     try
-      LHttpClient.Post(AUrl, LResponse);
+      // [] = TFPHttpClient does not check the status itself (its Get accepts
+      // only 200): the check below decides, as in the Delphi branch
+      LHttpClient.HTTPMethod('POST', AUrl, LResponse, []);
       if (LHttpClient.ResponseStatusCode < 200) or (LHttpClient.ResponseStatusCode > 299) then
-        raise exception.create(LHttpClient.ResponseStatusText);
-      Result := LResponse.Text;
+        raise Exception.Create(FpcErrorMessage(LHttpClient, LResponse.DataString, True));
+      Result := LResponse.DataString;
     finally
       LHttpClient.RequestBody.Free;
       LResponse.Free;
@@ -427,7 +458,7 @@ begin
 {$IFDEF FPC}
   LJsonData :=  GetJSON('{}');
   try
-    TJSONObject(LJsonData)..Add('invoice', AInvoice);
+    TJSONObject(LJsonData).Add('invoice', AInvoice);
     LBody := TJSONObject(LJsonData).AsJSON;
   finally
     LJsonData.Free;
@@ -453,6 +484,8 @@ var
   LBody: string;
 {$IFDEF FPC}
   LJsonData: TJSONData;
+  LJsonArray: TJSONArray;
+  I: Integer;
 {$ENDIF}
 begin
   if (AUrl.Trim.IsEmpty) or (Length(AFilterTypes) = 0) then
@@ -461,8 +494,13 @@ begin
 {$IFDEF FPC}
   LJsonData :=  GetJSON('{}');
   try
+    LJsonArray := TJSONArray.Create;
+    for I := Low(AFilterTypes) to High(AFilterTypes) do
+      LJsonArray.Add(AFilterTypes[I]);
     if not ADescription.Trim.IsEmpty then
-      TJSONObject(LJsonData)..Add('description', ADescription);
+      TJSONObject(LJsonData).Add('description', ADescription);
+    TJSONObject(LJsonData).Add('url', AUrl);
+    TJSONObject(LJsonData).Add('filter_types', LJsonArray);
     LBody := TJSONObject(LJsonData).AsJSON;
   finally
     LJsonData.Free;
@@ -562,10 +600,9 @@ begin
   Result := PostInvoice(LBody);
 end;
 
-{$ENDIF}
-
 function TAPIAlby.AuthToken(AValue: string): TAPIAlby;
 begin
+  Result := Self;
   FAuthToken := AValue;
 end;
 

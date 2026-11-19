@@ -11,7 +11,7 @@ uses
   cthreads,
   {$ENDIF}
   Classes, consoletestrunner,
-  TestServerFpc, TestIdeaLLibFpc;
+  TestServerFpc, TestIdeaLLibFpc, TestBitcoinApisFpc;
 
 var
   LApp: TTestRunner;

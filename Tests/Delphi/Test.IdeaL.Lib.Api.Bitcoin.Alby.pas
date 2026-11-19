@@ -46,6 +46,8 @@ type
     procedure AnyTwoHundred_IsSuccess;
     [Test]
     procedure ErrorMessages;
+    [Test]
+    procedure AuthToken_ReturnsSelf;
   end;
 
 implementation
@@ -300,6 +302,20 @@ begin
     Assert.AreEqual('404 Nope', RaisedMessage(procedure begin LApi.DelWebWebHookById('w'); end), 'DELETE: no body in the message');
     Answer(400, 'Oops', '{"error":"bad"}');
     Assert.AreEqual('400 Oops - {"error":"bad"}', RaisedMessage(procedure begin LApi.PostInvoice(1); end), 'POST: body in the message');
+  finally
+    LApi.Free;
+  end;
+end;
+
+procedure TAlbyTests.AuthToken_ReturnsSelf;
+var
+  LApi: TAPIAlby;
+begin
+  // 0.0.6 left Result unassigned, so chained calls used an undefined reference
+  LApi := TAPIAlby.Create;
+  try
+    Assert.AreSame(LApi, LApi.AuthToken('x'));
+    Assert.AreEqual('x', LApi.AuthToken);
   finally
     LApi.Free;
   end;
