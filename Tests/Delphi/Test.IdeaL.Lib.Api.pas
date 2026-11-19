@@ -47,6 +47,8 @@ type
     procedure IsTransportError_FalseForApiErrorsAndPlainExceptions;
     [Test]
     procedure OldOverloads_DelegateToTimeoutOverloads;
+    [Test]
+    procedure EmptyHeaderValues_AreNotSent_AndDoNotRaise;
   end;
 
 implementation
@@ -396,6 +398,30 @@ begin
     Assert.AreEqual(60000, LSpy.LastResponse);
   finally
     LSpy.Free;
+  end;
+end;
+
+procedure TIdeaLApiTests.EmptyHeaderValues_AreNotSent_AndDoNotRaise;
+var
+  LApi: TIdeaLApi;
+begin
+  // Up to 0.0.6 an empty header value made WinHTTP fail with 12150
+  // ("Error adding header"), e.g. CoinOS login with an empty x-api-key.
+  FServer.Handler :=
+    procedure(const ARequest: TTestRequest; AResponse: TTestResponse)
+    begin
+      AResponse.Body := 'ok';
+    end;
+  LApi := TIdeaLApi.Create;
+  try
+    Assert.AreEqual('ok', LApi.Get(FServer.Url('/g'), [TNameValuePair.Create('x-api-key', ''),
+      TNameValuePair.Create('X-Test', 'kept')]));
+    Assert.AreEqual('kept', FServer.LastRequest.Header('X-Test'));
+    Assert.AreEqual(-1, FServer.LastRequest.Headers.IndexOfName('x-api-key'), 'empty header not sent');
+    Assert.AreEqual('ok', LApi.Post(FServer.Url('/p'), '{}', [TNameValuePair.Create('x-api-key', '')]));
+    Assert.AreEqual(-1, FServer.LastRequest.Headers.IndexOfName('x-api-key'));
+  finally
+    LApi.Free;
   end;
 end;
 

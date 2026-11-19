@@ -183,6 +183,28 @@ begin
 {$ENDIF}
 end;
 
+{ Drops headers whose value is empty. Why: WinHTTP treats "Name:" with an
+  empty value as "remove the header Name" and, when the request does not have
+  it, fails with 12150 (ERROR_WINHTTP_HEADER_NOT_FOUND, "Error adding header").
+  Up to 0.0.6 this made e.g. TAPICoinOS.PostLogin fail whenever an optional
+  header such as x-api-key was left empty. An empty header carries no
+  information, so it is simply not sent, on every platform. }
+function WithoutEmptyHeaders(const AHeaders: TNetHeaders): TNetHeaders;
+var
+  I, LCount: Integer;
+begin
+  Result := nil;
+  SetLength(Result, Length(AHeaders));
+  LCount := 0;
+  for I := 0 to High(AHeaders) do
+    if AHeaders[I].Value <> '' then
+    begin
+      Result[LCount] := AHeaders[I];
+      Inc(LCount);
+    end;
+  SetLength(Result, LCount);
+end;
+
 {$IFDEF FPC}
 class procedure TIdeaLApi.GetHttpRequest(
   out AHttpClient: TFPHttpClient;
@@ -215,7 +237,7 @@ begin
   try
     LResponse := TStringStream.Create('');
     try
-      for LPair in AHeaders do
+      for LPair in WithoutEmptyHeaders(AHeaders) do
         LHttpClient.AddHeader(LPair.Name, LPair.Value);
       LHttpClient.ConnectTimeout := AConnectTimeout;
       LHttpClient.IOTimeout := AResponseTimeout;
@@ -333,7 +355,7 @@ begin
     LResponse := ExecuteWithDeadline(LHttp, AConnectTimeout + AResponseTimeout,
       function: IAsyncResult
       begin
-        Result := LHttp.BeginPost(AUrl, LStrm, nil, AHeaders);
+        Result := LHttp.BeginPost(AUrl, LStrm, nil, WithoutEmptyHeaders(AHeaders));
       end, LKeepAlive);
   finally
     if not LKeepAlive then
@@ -377,7 +399,7 @@ begin
     LResponse := ExecuteWithDeadline(LHttp, AConnectTimeout + AResponseTimeout,
       function: IAsyncResult
       begin
-        Result := LHttp.BeginGet(AUrl, nil, AHeaders);
+        Result := LHttp.BeginGet(AUrl, nil, WithoutEmptyHeaders(AHeaders));
       end, LKeepAlive);
   finally
     if not LKeepAlive then

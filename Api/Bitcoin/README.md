@@ -21,6 +21,8 @@ There is also a video demonstration on [Youtube](https://www.youtube.com/watch?v
 Awesome CoinOS, list of implemented solutions: [link](https://github.com/igorbastosib/awesome-coinos)<br />
 CoinOS server source (the live API): [git.coinos.io/coinos-server.git](https://git.coinos.io/coinos-server.git)<br />
 
+**Login through the API needs a captcha.** `PostLogin` is answered with HTTP 401 "failed captcha" unless the request carries a reCAPTCHA token, an `x-api-key` registered by the CoinOS team (set it with `HeaderArray`), or the account is allowlisted by CoinOS. For your own integrations, log in on coinos.io, copy the token (see `Demos/Api/Bitcoin/CoinOS/AuthToken.jpg`) and use it with `AuthToken`.
+
 ### Paying a Lightning address safely (trackable)
 
 `TAPICoinOS.PostPaymentLnAddress` pays a Lightning address in one call (`POST /send/:lnaddress/:amount`): CoinOS resolves the address, fetches the invoice and pays it, and you never see the invoice before money moves. If that call dies without an answer (timeout, restart, network), you cannot find out whether it paid, and calling it again may pay twice.

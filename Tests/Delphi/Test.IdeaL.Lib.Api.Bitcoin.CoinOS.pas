@@ -38,6 +38,8 @@ type
     [Test]
     procedure Compat_PostLogin_BodyAndHeaderArray;
     [Test]
+    procedure PostLogin_EmptyXApiKey_DoesNotRaise;
+    [Test]
     procedure Compat_PostUser_SendsJsonAsIs;
     [Test]
     procedure Compat_PostInvoice_Bodies;
@@ -627,6 +629,24 @@ begin
   Assert.AreEqual('lnbc1abc', TAPICoinOS.NormalizeInvoice('lightning:lnbc1abc'));
   Assert.AreEqual('lnbc1abc', TAPICoinOS.NormalizeInvoice('LIGHTNING:LNBC1' + #13#10#9 + 'ABC'));
   Assert.AreEqual('', TAPICoinOS.NormalizeInvoice(''));
+end;
+
+procedure TCoinOSTests.PostLogin_EmptyXApiKey_DoesNotRaise;
+var
+  LApi: TAPICoinOS;
+begin
+  // The CoinOS demo always passes the x-api-key edit through HeaderArray; when
+  // it is empty, 0.0.6 failed with "Error adding header: (12150)".
+  AnswerJson('{"token":"t"}');
+  LApi := NewApi;
+  try
+    Assert.AreEqual('{"token":"t"}',
+      LApi.HeaderArray([TAPICoinOS.THeaderPair.Create('x-api-key', '')]).PostLogin('u', 'p'));
+    Assert.AreEqual('/api/login', FServer.LastRequest.Path);
+    Assert.AreEqual(-1, FServer.LastRequest.Headers.IndexOfName('x-api-key'));
+  finally
+    LApi.Free;
+  end;
 end;
 
 initialization

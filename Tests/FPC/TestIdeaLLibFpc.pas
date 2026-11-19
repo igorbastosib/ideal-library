@@ -44,6 +44,7 @@ type
     procedure GetPaymentState_Mapping;
     procedure Compat_Bodies;
     procedure HeaderArray_OnGet;
+    procedure PostLogin_EmptyXApiKey;
   end;
 
   TLnurlFpcTests = class(TTestCase)
@@ -447,6 +448,25 @@ begin
     LApi.HeaderArray(LPairs).GetMe;
     AssertEquals('k1', Seen.XApiKey);
     AssertEquals('/api/me', Seen.Path);
+  finally
+    LApi.Free;
+  end;
+end;
+
+procedure TCoinOSFpcTests.PostLogin_EmptyXApiKey;
+var
+  LApi: TAPICoinOS;
+  LPairs: TAPICoinOS.THeaderArray;
+begin
+  // empty header values are not sent (WinHTTP failed with 12150 on Delphi)
+  SetScript(200, '{"token":"t"}');
+  LApi := NewCoinOS;
+  try
+    SetLength(LPairs, 1);
+    LPairs[0] := TAPICoinOS.THeaderPair.Create('x-api-key', '');
+    AssertEquals('{"token":"t"}', LApi.HeaderArray(LPairs).PostLogin('u', 'p'));
+    AssertEquals('/api/login', Seen.Path);
+    AssertEquals('', Seen.XApiKey);
   finally
     LApi.Free;
   end;

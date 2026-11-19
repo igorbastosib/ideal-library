@@ -773,12 +773,33 @@ procedure TForm1.btnLoginClick(Sender: TObject);
 begin
   var
   LApiCoinOS := TAPICoinOS.Create;
-  try    
+  try
     var
-    LResult :=
-      LApiCoinOS
-      .HeaderArray([TAPICoinOS.THeaderPair.Create('x-api-key', edtXApiKey.Text)])
-      .PostLogin(edtUsername.Text, edtPassword.Text);
+    LResult := EmptyStr;
+    try
+      // An empty x-api-key is simply not sent (since 0.0.7)
+      LResult :=
+        LApiCoinOS
+        .HeaderArray([TAPICoinOS.THeaderPair.Create('x-api-key', edtXApiKey.Text)])
+        .PostLogin(edtUsername.Text, edtPassword.Text);
+    except
+      on E: EIdeaLApiError do
+      begin
+        // CoinOS only lets API logins through with a reCAPTCHA token, an
+        // x-api-key registered by the CoinOS team, or an allowlisted account.
+        if (E.StatusCode = 401) and E.ResponseBody.ToLower.Contains('captcha') then
+        begin
+          AddLog('Login refused by CoinOS: ' + E.ResponseBody);
+          ShowMessage(
+            'CoinOS refused the login: "' + E.ResponseBody + '".' + sLineBreak + sLineBreak +
+            'Logging in through the API needs a captcha, unless CoinOS gave you an x-api-key.' + sLineBreak +
+            'Instead, log in on coinos.io, copy your token (see Demos\Api\Bitcoin\CoinOS\AuthToken.jpg) ' +
+            'and paste it in "Exported token".');
+          Exit;
+        end;
+        raise;
+      end;
+    end;
     var
     LJSONObj := TJSONObject.ParseJSONValue(LResult) as TJSONObject;
     // edtExportedToken.OnTyping := False;

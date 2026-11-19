@@ -12,6 +12,19 @@ Changes made to this repository by AI agents, newest first. One entry per work s
 - Not done / not verified: <honest list>
 ```
 
+## 2026-11-19 — Fix "Error adding header (12150)" on CoinOS login with an empty x-api-key
+
+- Agent: Claude Code Opus 5.5
+- Branch / commits: `feature/coinos-safe-lnaddress-payment` — see `git log` (fix commit after `c572ee6`). Nothing pushed.
+- Plan: [plans/2026-11-18-coinos-safe-lnaddress-payment.md](plans/2026-11-18-coinos-safe-lnaddress-payment.md)
+- Changed:
+  - `Api/IdeaL.Lib.Api.pas`: headers with an empty value are no longer sent (Delphi and FPC). WinHTTP reads "Name:" with an empty value as "remove header" and fails with 12150 when it is absent; the demo always passes the x-api-key edit, so login failed whenever it was empty. Reproduced with the 0.0.6 code from `master` too: the bug predates this branch.
+  - `Demos/Api/Bitcoin/CoinOS/Unit1.pas`: when CoinOS answers 401 "failed captcha", the demo explains that API logins need a captcha or a CoinOS x-api-key and points to the exported token.
+  - `Api/Bitcoin/README.md`: note about the captcha on API logins (coinos-server `routes/users.ts`, `login` → `verifyRecaptcha`: bypass only with a registered x-api-key, allowlisted user or user agent, .onion host, or a valid reCAPTCHA token).
+  - Tests: `EmptyHeaderValues_AreNotSent_AndDoNotRaise` (base), `PostLogin_EmptyXApiKey_DoesNotRaise` (CoinOS), `PostLogin_EmptyXApiKey` (FPC).
+- Verified: DUnitX 122/122, fpcunit 25/25; demo compiles (dcc32, dcc64). Live, with the maintainer's test account and no money moved: the login request now reaches CoinOS, which answers 401 "failed captcha" (server policy, see above).
+- Not done / not verified: authenticated live calls (GET /me, payments) need the exported token from coinos.io.
+
 ## 2026-11-18 — CoinOS trackable payments: implementation (steps S0–S6)
 
 - Agent: Claude Code Opus 5.5
