@@ -45,8 +45,9 @@ type
       AOnReceiveData: TReceiveDataEvent = nil);
 {$ENDIF}
 
-    function Get(AUrl: string): string;
-    function Post(AUrl, ABody: string): string;
+    // Virtual since 0.0.7 so that descendants and the tests under Tests/ can intercept requests.
+    function Get(AUrl: string): string; virtual;
+    function Post(AUrl, ABody: string): string; virtual;
     { protected declarations }
   public
     const
