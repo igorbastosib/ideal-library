@@ -106,7 +106,7 @@ git diff --stat                    # a one-line change must not show the whole f
 
   `Tests/Delphi` is a DUnitX console project (Win64; DUnitX ships only for Win64 in this RAD Studio). `Tests/Delphi/Test.IdeaL.Lib.Api.Compat.pas` pins the 0.0.6 behaviour of `TIdeaLApi` that other projects depend on: it must stay green. `Tests/FPC` is an fpcunit runner mirroring the Delphi tests for units with FPC branches. Shared fixtures (BOLT 11 spec vectors) live in `Tests/Shared`.
 - Call `dcc32`/`dcc64`/`fpc` from PowerShell, or from Git Bash only with relative paths: Git Bash rewrites `-N0C:/...`-style arguments into broken paths.
-- After touching `TIdeaLApi`, compile every unit that derives from it: CoinOS, Alby, DePIX, DIGPIX, Exchange, ImgBB, LnurlPay. Known pre-existing failures (2026-11-18): Exchange does not compile on Delphi (`FAuthToken` undeclared); Alby, DePIX and DIGPIX do not compile on FPC. See `Api/Bitcoin/README.md`, compatibility table.
+- After touching `TIdeaLApi`, compile every unit that derives from it: CoinOS, Alby, DePIX, DIGPIX, Exchange, ImgBB, LnurlPay. Since 2026-11-19 every unit under `Api/Bitcoin/` compiles with dcc32, dcc64 and FPC 3.2.2 (see `Api/Bitcoin/README.md`, compatibility table); ImgBB has no FPC branch.
 - On Windows, `THTTPClient.ResponseTimeout` is not always honoured while the server has not sent the headers yet; `TIdeaLApi` enforces a wall-clock deadline itself. Do not remove it.
 - Report the result honestly: compiled / not compiled / tests passed / tests not run.
 

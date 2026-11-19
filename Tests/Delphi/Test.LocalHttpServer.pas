@@ -57,6 +57,9 @@ type
     constructor Create;
     destructor Destroy; override;
     function Url(const APath: string = ''): string;
+    /// <summary> AUrl with its scheme, host and port replaced by this server's,
+    /// keeping path and query (lets a spy send a request built for a real host here). </summary>
+    function Rebase(const AUrl: string): string;
     property Port: Integer read GetPort;
     property Handler: TTestHandler read FHandler write FHandler;
     property LastRequest: TTestRequest read GetLastRequest;
@@ -64,10 +67,25 @@ type
     procedure Reset;
   end;
 
+/// <summary> Runs AProc and returns the message of the exception it raised,
+/// or '' when it raised nothing. </summary>
+function RaisedMessage(const AProc: TProc): string;
+
 implementation
 
 uses
   IdGlobal;
+
+function RaisedMessage(const AProc: TProc): string;
+begin
+  Result := '';
+  try
+    AProc();
+  except
+    on E: Exception do
+      Result := E.Message;
+  end;
+end;
 
 { TTestRequest }
 
@@ -238,6 +256,20 @@ begin
   finally
     FLock.Leave;
   end;
+end;
+
+function TLocalHttpServer.Rebase(const AUrl: string): string;
+var
+  LStart, LSlash: Integer;
+begin
+  LStart := Pos('://', AUrl);
+  if LStart = 0 then
+    Exit(Url(AUrl));
+  LSlash := Pos('/', AUrl, LStart + 3);
+  if LSlash = 0 then
+    Result := Url('/')
+  else
+    Result := Url(Copy(AUrl, LSlash, MaxInt));
 end;
 
 function TLocalHttpServer.Url(const APath: string): string;

@@ -1,4 +1,8 @@
 unit IdeaL.Lib.Api.Bitcoin.Exchange;
+
+{$IFDEF FPC}
+{$mode objfpc}{$H+}
+{$ENDIF}
 {******************************************************************************
 
 ******************************************************************************}
@@ -47,8 +51,9 @@ type
       AOnReceiveData: TReceiveDataEvent = nil);
 {$ENDIF}
 
-    function Post(AUrl, ABody: string): string;
-    function Get(AUrl: string): string;
+    // Virtual since 0.0.7 so that descendants and the tests under Tests/ can intercept requests.
+    function Post(AUrl, ABody: string): string; virtual;
+    function Get(AUrl: string): string; virtual;
     { protected declarations }
   public
     { public declarations }
@@ -76,13 +81,25 @@ uses
   opensslsockets;
 {$ENDIF}
 
+{$IFDEF FPC}
+{ Error message in the format of the Delphi branch: "<code> <text>", plus
+  " - <body>" when AWithBody is True and the body is not blank. }
+function FpcErrorMessage(AHttpClient: TFPHttpClient; const ABody: string;
+  AWithBody: Boolean): string;
+begin
+  Result := IntToStr(AHttpClient.ResponseStatusCode) + ' ' + AHttpClient.ResponseStatusText;
+  if AWithBody and (Trim(ABody) <> '') then
+    Result := Result + ' - ' + ABody;
+end;
+{$ENDIF}
+
 { TAPIExchange }
 
 function TAPIExchange.Get(AUrl: string): string;
 {$IFDEF FPC}
 var
   LHttpClient: TFPHttpClient;
-  LResponse : TStringList;
+  LResponse : TStringStream;
 {$ELSE}
 var
   LHttp: THTTPClient;
@@ -93,12 +110,14 @@ begin
   InitSSLInterface;
   GetNetHttpRequestLocal(LHttpClient);
   try
-    LResponse := TStringList.Create;
+    LResponse := TStringStream.Create('');
     try
-      LHttpClient.Get(AUrl, LResponse);
+      // [] = TFPHttpClient does not check the status itself (its Get accepts
+      // only 200): the check below decides, as in the Delphi branch
+      LHttpClient.HTTPMethod('GET', AUrl, LResponse, []);
       if LHttpClient.ResponseStatusCode <> 200 then
-        raise exception.create(LHttpClient.ResponseStatusText);
-      Result := LResponse.Text;
+        raise Exception.Create(FpcErrorMessage(LHttpClient, LResponse.DataString, False));
+      Result := LResponse.DataString;
     finally
       LResponse.Free;
     end;
@@ -183,7 +202,7 @@ function TAPIExchange.Post(AUrl, ABody: string): string;
 {$IFDEF FPC}
 var
   LHttpClient: TFPHttpClient;
-  LResponse : TStringList;
+  LResponse : TStringStream;
 {$ELSE}
 var
   LHttp: THTTPClient;
@@ -194,13 +213,15 @@ begin
   InitSSLInterface;
   GetNetHttpRequestLocal(LHttpClient);
   try
-    LResponse := TStringList.Create;
+    LResponse := TStringStream.Create('');
     LHttpClient.RequestBody := TRawByteStringStream.Create(ABody);
     try
-      LHttpClient.Post(AUrl, LResponse);
+      // [] = TFPHttpClient does not check the status itself (its Get accepts
+      // only 200): the check below decides, as in the Delphi branch
+      LHttpClient.HTTPMethod('POST', AUrl, LResponse, []);
       if LHttpClient.ResponseStatusCode <> 200 then
-        raise exception.create(LHttpClient.ResponseStatusText);
-      Result := LResponse.Text;
+        raise Exception.Create(FpcErrorMessage(LHttpClient, LResponse.DataString, True));
+      Result := LResponse.DataString;
     finally
       LHttpClient.RequestBody.Free;
       LResponse.Free;
@@ -211,9 +232,10 @@ begin
 {$ELSE}
   var
   LHeader: TNetHeaders;
+  // No Authorization header: these are public price APIs (it was removed from
+  // Get in 7175dfe, "Removing Authorization from Exchange API"; Post was missed).
   LHeader :=
     [
-      TNameValuePair.Create('Authorization', 'Bearer ' + FAuthToken),
       TNameValuePair.Create('Content-Type', 'application/json; charset=utf-8'),
       TNameValuePair.Create('Accept', '*/*')
     ];

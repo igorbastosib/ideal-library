@@ -1,5 +1,9 @@
 unit IdeaL.Lib.Api.Bitcoin.DePIX;
 
+{$IFDEF FPC}
+{$mode objfpc}{$H+}
+{$ENDIF}
+
 interface
 
 uses
@@ -60,8 +64,9 @@ type
       AOnReceiveData: TReceiveDataEvent = nil);
 {$ENDIF}
 
-    function Post(AUrl, ABody: string): string;
-    function Get(AUrl: string): string;
+    // Virtual since 0.0.7 so that descendants and the tests under Tests/ can intercept requests.
+    function Post(AUrl, ABody: string): string; virtual;
+    function Get(AUrl: string): string; virtual;
     { protected declarations }
   public
     const
@@ -123,6 +128,24 @@ type
 
 implementation
 
+{$IFDEF FPC}
+uses
+  openssl, { This implements the procedure InitSSLInterface }
+  opensslsockets;
+{$ENDIF}
+
+{$IFDEF FPC}
+{ Error message in the format of the Delphi branch: "<code> <text>", plus
+  " - <body>" when AWithBody is True and the body is not blank. }
+function FpcErrorMessage(AHttpClient: TFPHttpClient; const ABody: string;
+  AWithBody: Boolean): string;
+begin
+  Result := IntToStr(AHttpClient.ResponseStatusCode) + ' ' + AHttpClient.ResponseStatusText;
+  if AWithBody and (Trim(ABody) <> '') then
+    Result := Result + ' - ' + ABody;
+end;
+{$ENDIF}
+
 { TAPIDePix }
 
 function TAPIDePix.AuthToken(AValue: string): TAPIDePix;
@@ -180,7 +203,7 @@ function TAPIDePix.Get(AUrl: string): string;
 {$IFDEF FPC}
 var
   LHttpClient: TFPHttpClient;
-  LResponse : TStringList;
+  LResponse : TStringStream;
 {$ELSE}
 var
   LHttp: THTTPClient;
@@ -191,12 +214,14 @@ begin
   InitSSLInterface;
   GetNetHttpRequestLocal(LHttpClient);
   try
-    LResponse := TStringList.Create;
+    LResponse := TStringStream.Create('');
     try
-      LHttpClient.Get(AUrl, LResponse);
+      // [] = TFPHttpClient does not check the status itself (its Get accepts
+      // only 200): the check below decides, as in the Delphi branch
+      LHttpClient.HTTPMethod('GET', AUrl, LResponse, []);
       if (LHttpClient.ResponseStatusCode < 200) or (LHttpClient.ResponseStatusCode > 299) then
-        raise exception.create(LHttpClient.ResponseStatusText);
-      Result := LResponse.Text;
+        raise Exception.Create(FpcErrorMessage(LHttpClient, LResponse.DataString, True));
+      Result := LResponse.DataString;
     finally
       LResponse.Free;
     end;
@@ -272,10 +297,11 @@ begin
 end;
 
 function TAPIDePix.GetDeposits(AStart, AEnd: TDate; AStatus: string): string;
+var
+  LStart: string;
+  LEnd: string;
 begin
-  var
   LStart := FormatDateTime('yyyy-mm-dd', AStart);
-  var
   LEnd := FormatDateTime('yyyy-mm-dd', AEnd);
   Result := GetDeposits(LStart, LEnd, AStatus);
 end;
@@ -308,7 +334,7 @@ function TAPIDePix.Post(AUrl, ABody: string): string;
 {$IFDEF FPC}
 var
   LHttpClient: TFPHttpClient;
-  LResponse : TStringList;
+  LResponse : TStringStream;
 {$ELSE}
 var
   LHttp: THTTPClient;
@@ -319,14 +345,16 @@ begin
   InitSSLInterface;
   GetNetHttpRequestLocal(LHttpClient);
   try
-    LResponse := TStringList.Create;
+    LResponse := TStringStream.Create('');
     LHttpClient.RequestBody := TRawByteStringStream.Create(ABody);
     try
       LHttpClient.ConnectTimeout := 30000;
-      LHttpClient.Post(AUrl, LResponse);
-      if LHttpClient.ResponseStatusCode <> 200 then
-        raise exception.create(LHttpClient.ResponseStatusText);
-      Result := LResponse.Text;
+      // [] = TFPHttpClient does not check the status itself (its Get accepts
+      // only 200): the check below decides, as in the Delphi branch
+      LHttpClient.HTTPMethod('POST', AUrl, LResponse, []);
+      if (LHttpClient.ResponseStatusCode < 200) or (LHttpClient.ResponseStatusCode > 299) then
+        raise Exception.Create(FpcErrorMessage(LHttpClient, LResponse.DataString, True));
+      Result := LResponse.DataString;
     finally
       LHttpClient.RequestBody.Free;
       LResponse.Free;
@@ -456,8 +484,6 @@ Expected response on 2026-07-05
       LJsonObject.Add('depixSplitAddress', ADepixSplitAddress);
       LJsonObject.Add('splitFee', FormatFloat('0.00', StrToFloat(ASplitFee)) + '%');
     end;
-    if ALightning then
-      LJsonObject.Add('lightning', ALightning);
     LBody := TJSONObject(LJsonData).AsJSON;
   finally
     LJsonData.Free;

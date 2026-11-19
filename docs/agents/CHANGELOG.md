@@ -25,6 +25,28 @@ Changes made to this repository by AI agents, newest first. One entry per work s
 - Verified: DUnitX 122/122, fpcunit 25/25; demo compiles (dcc32, dcc64). Live, with the maintainer's test account and no money moved: the login request now reaches CoinOS, which answers 401 "failed captcha" (server policy, see above).
 - Not done / not verified: authenticated live calls (GET /me, payments) need the exported token from coinos.io.
 
+## 2026-11-19 — Alby, DePIX, DIGPIX and Exchange: compile on Delphi and FPC, characterisation tests
+
+- Agent: Claude Code Opus 5.5
+- Branch / commits: `fix/bitcoin-siblings-compile` (cut from `feature/coinos-safe-lnaddress-payment` at `c572ee6`, because the test runners and the FPC build of `TIdeaLApi` exist only there) — `a47f8ac` (seam + DUnitX characterisation tests), `19af9b6` (Exchange), `58f3082` (FPC fixes + fpcunit tests), plus the docs commit that adds this entry. Nothing pushed.
+- Plan: none (fixes of compile errors that already existed on `master`, listed as known failures in the previous entry).
+- Changed:
+  - `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.Exchange.pas`: `Post` (Delphi) no longer sends `Authorization: Bearer FAuthToken`. Evidence: `TAPIExchange` never declared `FAuthToken` (not since the unit was created in `2894576`, 2024-09-08) and `TIdeaLApi` never had it, so the unit never compiled on Delphi; all its endpoints are public; `7175dfe` ("Removing Authorization from Exchange API", 2025-07-06) commented the same header out of `Get` and missed `Post`. Added `{$mode objfpc}{$H+}`.
+  - `IdeaL.Lib.Api.Bitcoin.Alby.pas`, `.DePIX.pas`, `.DIGPIX.pas`: `{$mode objfpc}{$H+}`, `openssl`/`opensslsockets` (and `DateUtils` for Alby) in the FPC uses; inline vars in shared code (DePIX `GetDeposits(TDate)`, DIGPIX `GetQrCode`) replaced by declared vars; Alby: misplaced `{$ENDIF}` that hid six methods from FPC, `..Add` typos, FPC `PostWebWebHook` body completed (`url`, `filter_types`), `AuthToken(AValue)` returns `Self` (Result was unassigned, on Delphi too); DePIX: undeclared `ALightning` removed, FPC `Post` accepts any 2xx; DIGPIX: `EmtpyStr`/`LJSONObj` typos, FPC sends `X-API-Key` like Delphi (Delphi moved from Bearer in `6c5424f`, FPC was left behind).
+  - FPC transport of the four units: `HTTPMethod(..., [])` into a `TStringStream` instead of `TFPHttpClient.Get/Post/Delete` into a `TStrings`, so the units' own status checks decide (before, FPC `Get` raised `EHTTPClient` on anything but 200, which `IsTransportError` reports as "no answer"), results have no extra trailing line break, and error messages use the Delphi format. Exchange's FPC branch compiled before: for FPC users of Exchange this changes the exception class/message on errors and removes the trailing line break.
+  - Protected `Get`/`Post` (and Alby `Del`) of the four units are now `virtual` (test seam; descendants can intercept requests).
+  - Tests: `Tests/Delphi/Test.IdeaL.Lib.Api.Bitcoin.{Alby,DePIX,DIGPIX,Exchange}.pas`, `Tests/FPC/TestBitcoinApisFpc.pas`; `TLocalHttpServer.Rebase`, `RaisedMessage`; `TestServerFpc` records `Content-Type`/`X-Async`/`X-Nonce`, `TestRebase`.
+  - Docs: compatibility table in `Api/Bitcoin/README.md`, `docs/agents/INDEX.md`, `AGENTS.md` §9 (known failures line).
+- Verified:
+  - The Alby, DePIX and DIGPIX DUnitX tests were written first and passed (148/148 with the existing suite) on the unchanged request code; they stayed unchanged and green after the fixes.
+  - Each of Alby, DePIX, DIGPIX, Exchange (and CoinOS, LnurlPay, Bolt11) compiles on its own with dcc32, dcc64 and `C:\FPC\3.2.2\bin\i386-win32\fpc.exe` (no `-M` option needed now).
+  - DUnitX (Win64): 153/153. fpcunit (FPC 3.2.2 i386-win32): 44/44.
+- Not done / not verified:
+  - No call to the real Alby, Eulen, VemPraDig or price APIs; only the local test servers.
+  - Demos (`Demos/Api/Bitcoin/{Alby,DePIX,DIGPIX}`) not rebuilt; no public signature changed except the `virtual` seam and the Alby `AuthToken` result.
+  - Left as found (follow-ups): DePIX `constructor Create` hides the virtual `TIdeaLApi.Create` (W1010 / FPC warning) and does not call `inherited`; DePIX `splitFee` uses the global `FormatSettings`, so on a pt-BR locale `'2.5'` fails `StrToFloat` and a value like `'2,5'` is sent as `"2,50%"`; DIGPIX's Delphi `GetNetHttpRequestLocal` still sets `Authorization: Bearer` (unused by the unit itself); FPC still sends `Content-Type: application/json` without `charset=utf-8` and a 30 s connect timeout in DePIX/DIGPIX; these units do not use the `TIdeaLApi` timeout overloads or `EIdeaLApiError`.
+  - FPC Unix targets and Lazarus not built.
+
 ## 2026-11-18 — CoinOS trackable payments: implementation (steps S0–S6)
 
 - Agent: Claude Code Opus 5.5

@@ -32,11 +32,16 @@ type
     Authorization: string;
     XTest: string;
     XApiKey: string;
+    ContentType: string;
+    XAsync: string;
+    XNonce: string;
     Count: Integer;
   end;
 
 procedure StartTestServer;
 function TestUrl(const APath: string): string;
+{ AUrl with scheme, host and port replaced by the test server's (path and query kept). }
+function TestRebase(const AUrl: string): string;
 procedure ResetScript;
 procedure SetScript(ACode: Integer; const ABody: string);
 function Script: TScript;
@@ -85,6 +90,9 @@ begin
     GSeen.Authorization := ARequest.Authorization;
     GSeen.XTest := ARequest.GetCustomHeader('X-Test');
     GSeen.XApiKey := ARequest.GetCustomHeader('x-api-key');
+    GSeen.ContentType := ARequest.ContentType;
+    GSeen.XAsync := ARequest.GetCustomHeader('X-Async');
+    GSeen.XNonce := ARequest.GetCustomHeader('X-Nonce');
     Inc(GSeen.Count);
     LScript := GScript;
   finally
@@ -137,6 +145,20 @@ begin
   Result := Format('http://127.0.0.1:%d%s', [GPort, APath]);
 end;
 
+function TestRebase(const AUrl: string): string;
+var
+  LStart, LSlash: Integer;
+begin
+  LStart := Pos('://', AUrl);
+  if LStart = 0 then
+    Exit(TestUrl(AUrl));
+  LSlash := Pos('/', Copy(AUrl, LStart + 3, MaxInt));
+  if LSlash = 0 then
+    Result := TestUrl('/')
+  else
+    Result := TestUrl(Copy(AUrl, LStart + 2 + LSlash, MaxInt));
+end;
+
 procedure ResetScript;
 begin
   GLock.Enter;
@@ -156,6 +178,9 @@ begin
     GSeen.Authorization := '';
     GSeen.XTest := '';
     GSeen.XApiKey := '';
+    GSeen.ContentType := '';
+    GSeen.XAsync := '';
+    GSeen.XNonce := '';
     GSeen.Count := 0;
   finally
     GLock.Leave;
