@@ -26,10 +26,10 @@ Map of the repository for agents. Descriptions of units not yet studied by an ag
 | `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.CoinOS.pas` | `TAPICoinOS` | ✔ tested | ✔ tested | `Demos/Api/Bitcoin/CoinOS` (FMX, updated) and `.../CoinOS/FPC` (Lazarus, not updated) | CoinOS custodial Lightning wallet API (`https://coinos.io/api`). Server source: `https://git.coinos.io/coinos-server.git`. `PostPayment` (fee/memo/pin), `GetPayment`, `GetPaymentState`, `BaseUrl`, `PaymentTimeout`. See plan `2026-11-18-coinos-safe-lnaddress-payment.md`. |
 | `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.LnurlPay.pas` | `TLnurlPay` | ✔ tested (Linux64 compiles) | ✔ Windows tested; Unix branch not compiled | CoinOS demo, "3 steps" box | LNURL-pay client (LUD-06/12/16) with amount check and SSRF guard (https only, public IPs only, no redirects). Wallet independent. |
 | `Api/Bitcoin/IdeaL.Lib.Bitcoin.Bolt11.pas` | `TBolt11Decoder`, `TBolt11` | ✔ tested | ✔ tested | CoinOS demo | Pure BOLT 11 decoder (no network, no signature check) with portable SHA-256. |
-| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.Alby.pas` | `TAPIAlby` | ✔ | ❌ pre-existing errors | `Demos/Api/Bitcoin/Alby` | Alby wallet API with a fixed access token. |
-| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.DePIX.pas` | `TAPIDePix` | ✔ | ❌ pre-existing errors | `Demos/Api/Bitcoin/DePIX` | Eulen Pix2DePix API. |
-| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.DIGPIX.pas` | `TAPIDigPix` | ✔ | ❌ pre-existing errors | `Demos/Api/Bitcoin/DIGPIX` | VemPraDig / DIGPIX. **Encoding: Windows-1252.** |
-| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.Exchange.pas` | `TAPIExchange` | ❌ pre-existing error (`FAuthToken`) | ✔ | — | Public price/rate APIs (uses CoinOS `/rates` among others). |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.Alby.pas` | `TAPIAlby` | ✔ tested | ✔ tested (fixed in 0.0.7) | `Demos/Api/Bitcoin/Alby` | Alby wallet API (`https://api.getalby.com`) with a fixed access token (`Authorization: Bearer`). Own `Get`/`Post`/`Del` (virtual since 0.0.7, not routed through `TIdeaLApi.Get`/`Post`); any 2xx is success. |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.DePIX.pas` | `TAPIDePix` | ✔ tested | ✔ tested (fixed in 0.0.7) | `Demos/Api/Bitcoin/DePIX` | Eulen Pix2DePix API (`https://depix.eulen.app/api`): Bearer token, `X-Async` (default `false`), `X-Nonce`. Own virtual `Get`/`Post`; any 2xx is success; error messages carry the body. `splitFee` is formatted with the global `FormatSettings` (locale dependent). |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.DIGPIX.pas` | `TAPIDigPix` | ✔ tested | ✔ tested (fixed in 0.0.7) | `Demos/Api/Bitcoin/DIGPIX` | VemPraDig / DIGPIX (`https://vempradig.com/api/v1/pos/`): key in `X-API-Key`. Own virtual `Get`/`Post`; only 200 is success. **Encoding: Windows-1252.** |
+| `Api/Bitcoin/IdeaL.Lib.Api.Bitcoin.Exchange.pas` | `TAPIExchange` | ✔ tested (fixed in 0.0.7) | ✔ tested | — | Public price/rate APIs (mempool.space, Coinbase, CoinOS `/rates`, Binance); no authentication. Own virtual `Get`/`Post`; only 200 is success. |
 | `Api/Bitcoin/README.md` | — | — | — | — | User-facing doc of the Bitcoin integrations, with a Delphi/Lazarus compatibility table. |
 | `Api/IdeaL.Lib.Api.DropBox.pas`, `Api/IdeaL.Lib.Download.DropBox.pas` | — | ✔ | — | `Demos/Api/DropBox/*` | DropBox API and downloads. |
 | `Api/IdeaL.Lib.Api.Image.ImgBB.pas` | `TImgBBApi` | ✔ | — | `Demos/Api/Image-ImgBB` | ImgBB image upload. |
@@ -43,7 +43,9 @@ Map of the repository for agents. Descriptions of units not yet studied by an ag
 | `Tests/Delphi/Test.LocalHttpServer.pas` | Indy HTTP server on 127.0.0.1 with scripted answers; records the last request. |
 | `Tests/Delphi/Test.IdeaL.Lib.Api.Compat.pas` | Characterisation of the 0.0.6 `TIdeaLApi` behaviour (must stay green). |
 | `Tests/Delphi/Test.IdeaL.Lib.Api.pas`, `Test.IdeaL.Lib.Api.Bitcoin.CoinOS.pas`, `Test.IdeaL.Lib.Bitcoin.Bolt11.pas`, `Test.IdeaL.Lib.Api.Bitcoin.LnurlPay.pas` | Unit tests of the base class, CoinOS (requests of every method pinned), BOLT 11 and LNURL-pay. |
-| `Tests/FPC/IdeaLLibTestsFpc.lpr`, `run-tests-fpc.ps1`, `TestServerFpc.pas`, `TestIdeaLLibFpc.pas` | fpcunit runner for the FPC branches, with an fcl-web HTTP server on 127.0.0.1. |
+| `Tests/Delphi/Test.IdeaL.Lib.Api.Bitcoin.{Alby,DePIX,DIGPIX,Exchange}.pas` | Characterisation of the requests (URL, method, headers, body), input checks and answer handling of these integrations. A spy descendant overrides the virtual `Get`/`Post`/`Del`, records the URL and sends the request to the local server (`TLocalHttpServer.Rebase`). |
+| `Tests/FPC/IdeaLLibTestsFpc.lpr`, `run-tests-fpc.ps1`, `TestServerFpc.pas`, `TestIdeaLLibFpc.pas` | fpcunit runner for the FPC branches, with an fcl-web HTTP server on 127.0.0.1 (it always sends the standard reason phrase, e.g. "Not Found"). |
+| `Tests/FPC/TestBitcoinApisFpc.pas` | fpcunit mirror of the Alby, DePIX, DIGPIX and Exchange Delphi tests (same spy approach, `TestRebase`). |
 | `Tests/Shared/Bolt11Vectors.pas` | BOLT 11 spec test vectors, generated from the spec, shared by both runners. |
 
 ## Root units *(name only unless stated)*

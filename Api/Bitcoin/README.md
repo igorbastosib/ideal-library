@@ -73,7 +73,7 @@ Initially built for rate and price check.<br />
 
 ## Compatibility Table
 
-Last verified on 2026-11-18 with Delphi 12 (dcc32/dcc64) and FPC 3.2.2 (i386-win32) by compiling each unit on its own; "tested" means the unit has automated tests under `Tests/` that pass on that compiler.
+Last verified on 2026-11-19 with Delphi 12 (dcc32/dcc64) and FPC 3.2.2 (i386-win32) by compiling each unit on its own; "tested" means the unit has automated tests under `Tests/` that pass on that compiler.
 
 | File | Delphi | Free Pascal / Lazarus |
 | ---- | ---- | ---- |
@@ -81,10 +81,12 @@ Last verified on 2026-11-18 with Delphi 12 (dcc32/dcc64) and FPC 3.2.2 (i386-win
 | CoinOS | ✔️ compiles, tested | ✔️ compiles, tested |
 | LnurlPay | ✔️ compiles, tested (Linux64: compiles) | ✔️ Windows compiles, tested; Unix branch not compiled |
 | Bolt11 | ✔️ compiles, tested | ✔️ compiles, tested |
-| Alby | ✔️ compiles | ❌ does not compile (missing imports: `InitSSLInterface`, `DateTimeToUnix`) |
-| DePIX | ✔️ compiles | ❌ does not compile (missing `InitSSLInterface`, qualifier errors) |
-| DIGPIX | ✔️ compiles | ❌ does not compile (missing `InitSSLInterface`) |
-| Exchange | ❌ does not compile (`FAuthToken` undeclared) | ✔️ compiles |
+| Alby | ✔️ compiles, tested | ✔️ compiles, tested (since 0.0.7) |
+| DePIX | ✔️ compiles, tested | ✔️ compiles, tested (since 0.0.7) |
+| DIGPIX | ✔️ compiles, tested | ✔️ compiles, tested (since 0.0.7) |
+| Exchange | ✔️ compiles, tested (since 0.0.7) | ✔️ compiles, tested |
+
+Alby, DePIX, DIGPIX and Exchange are tested against a local server only (requests and answer handling); no call to the real services was made. Their FPC branches send the same requests as the Delphi ones (fpjson writes the same JSON with extra spaces) and, since 0.0.7, report errors with the same message ("<code> <text>", plus " - <body>" where the Delphi branch adds it). The Exchange `Post` no longer sends an `Authorization` header (it referred to a token the class never had).
 
 The Lazarus demo (`Demos/Api/Bitcoin/CoinOS/FPC`) has not been rebuilt: Lazarus is not installed on the maintainer's machine.
 
