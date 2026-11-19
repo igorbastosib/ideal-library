@@ -12,6 +12,15 @@ Changes made to this repository by AI agents, newest first. One entry per work s
 - Not done / not verified: <honest list>
 ```
 
+## 2026-11-19 — Merge of the sibling fixes and first live CoinOS tests
+
+- Agent: Claude Code Opus 5.5
+- Branch / commits: `feature/coinos-safe-lnaddress-payment` — `64f97e0` (merge of `fix/bitcoin-siblings-compile`) and the docs commit that adds this entry. Nothing pushed.
+- Plan: [plans/2026-11-18-coinos-safe-lnaddress-payment.md](plans/2026-11-18-coinos-safe-lnaddress-payment.md) §11
+- Changed: merge only (conflict in this file, both entries kept); plan progress log with the live results.
+- Verified: DUnitX 155/155 and fpcunit 45/45 on the merged tree. Live, approved by the maintainer, between two CoinOS test accounts (internal): three-step payment of 10 sats paid and reported psPaid with the recipient's record; retry with the same invoice refused ("Invoice already paid") with no debit; one-call `PostPaymentLnAddress` of 5 sats first got HTTP 500 "request timed out" with no debit, then paid on a single retry. 15 sats sent in total. The live-test programs live in the agent's scratch folder, not in the repository.
+- Not done / not verified: payments to an external wallet (Wallet of Satoshi), fee cap, PIN, client-side timeout and expired-invoice cases.
+
 ## 2026-11-19 — Fix "Error adding header (12150)" on CoinOS login with an empty x-api-key
 
 - Agent: Claude Code Opus 5.5

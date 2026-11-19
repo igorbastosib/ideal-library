@@ -2,7 +2,7 @@
 
 | Field | Value |
 | ---- | ---- |
-| Status | In progress — S0–S6 done; S7 (live tests) waits for the test accounts, S8 (release) is the maintainer's |
+| Status | In progress — S0–S6 done; S7 internal tests (T1, T3, T8) passed 2026-11-19, external-wallet tests pending; S8 (release) is the maintainer's |
 | Branch | `feature/coinos-safe-lnaddress-payment` |
 | Owner | Igor (maintainer) / Claude Code Opus 5.5 |
 | Created | 2026-11-18 |
@@ -354,3 +354,13 @@ Accounts: CoinOS **A** (payer, small balance), CoinOS **B** (recipient, internal
 - 2026-11-18 — FPC parity tests (`ca24f4b`): 24 fpcunit tests, green.
 - 2026-11-18 — S5 done for the FMX demo (`31e723c`); Lazarus demo not updated (no LCL here).
 - 2026-11-18 — S6 done: READMEs, INDEX, AGENTS, CHANGELOG. Requester reply drafted at `C:\Temp` (outside the repository). Remaining: S7 live tests (waiting for accounts), S8 release, Lazarus demo.
+- 2026-11-19 — Fixed "Error adding header (12150)" on login with an empty x-api-key (`0419e67`, bug already in 0.0.6). API login itself is refused by CoinOS with 401 "failed captcha" (server policy); the demo now uses the exported token. Merged `fix/bitcoin-siblings-compile` (`64f97e0`): DUnitX 155/155, fpcunit 45/45.
+- 2026-11-19 — S7, first live run, approved by the maintainer: payer CoinOS test account A, payee CoinOS test account B (internal), 140 sats available. Results:
+
+  | Test | What | Result |
+  | ---- | ---- | ---- |
+  | T1 | Three-step payment of 10 sats to B's Lightning address (`TLnurlPay.Resolve` → `FetchInvoice` → `TBolt11Decoder.Decode` → `GetPaymentState` = psNone → `PostPayment` → `GetPaymentState`) | Resolve OK (min 1, max 100 000 000 sats, commentAllowed 512); invoice 10 sats, mainnet, ~30-day expiry, `h` matches the metadata (no `d`). `PostPayment` answered type internal, confirmed true, amount -10, fee 0. `GetPaymentState` = psPaid with the **recipient's** record (amount +10, type internal, `with` present) — confirms fact 6. Balance 140 → 130. |
+  | T3 | `PostPayment` again with the same invoice | Refused: HTTP 500 "Invoice already paid" (EIdeaLApiError, not a transport error). Balance unchanged (130). Confirms fact 7 for internal invoices. |
+  | T8 | One-call `PostPaymentLnAddress` of 5 sats with the default fee 0 | First call: HTTP 500 "request timed out" from CoinOS, nothing debited (balance 130, no record): a server-side timeout while it resolved the address itself. After checking that, retried once: OK in 6.2 s, type internal, fee 0, memo empty (confirms the `metadata["text/plain"]` finding). Balance 130 → 125. This first failure is exactly the doubt case the three-step path removes: here the payment list could be checked by hand only because the account was otherwise idle. |
+
+  Total sent to B: 15 sats. Not yet run: T2 (external wallet), T4 (fee cap below quote), T5 (PIN), T6 (client timeout on an external payment), T7 (expired invoice).
