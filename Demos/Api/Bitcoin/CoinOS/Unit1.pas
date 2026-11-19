@@ -183,6 +183,9 @@ type
     FSafeRequest: TLnurlPayRequest;
     FSafeResolvedAddress: string;
     FPendingInvoice: string;
+    // The note of the pending payment: sent to the payee as LNURL comment when
+    // the invoice is fetched, and kept as memo in our CoinOS record when paying.
+    FPendingNote: string;
 
     function NewCoinOS: TAPICoinOS;
     procedure ShowSafeInfo(const AText: string);
@@ -535,6 +538,7 @@ begin
 
     // Store the invoice BEFORE paying it
     FPendingInvoice := LInvoice.Invoice;
+    FPendingNote := edtSafeComment.Text;
     SaveData;
     edtPayInvoice.Text := FPendingInvoice;
     ShowSafeInfo(DescribeInvoice(LInvoice) + ' Saved. Step 3: pay.');
@@ -576,10 +580,21 @@ begin
 
     if chkSafeSimulateTimeout.IsChecked then
       LApiCoinOS.PaymentTimeout(1000);
+
+    // Two different notes:
+    // - the Comment field already went to the PAYEE as LNURL comment (LUD-12)
+    //   in step 2; an external wallet shows that text, never our memo;
+    // - the memo below is stored in OUR CoinOS payment record (and copied to
+    //   the recipient only when it is another CoinOS account).
+    // Using the same text for both keeps the note on both sides.
+    var
+    LMemo := FPendingNote;
+    if LMemo.IsEmpty then
+      LMemo := 'LN address ' + FSafeResolvedAddress;
     try
       var
       LResult := LApiCoinOS.PostPayment(FPendingInvoice, StrToIntDef(edtSafeFee.Text, 0),
-        'LN address ' + FSafeResolvedAddress, edtSafePin.Text);
+        LMemo, edtSafePin.Text);
       AddListBox(LResult);
       ShowSafeInfo('CoinOS accepted the payment. Step 4 shows when it is confirmed.');
     except
@@ -616,6 +631,7 @@ begin
           AddListBox(LRecord);
           ShowSafeInfo('Paid. The pending invoice was cleared.');
           FPendingInvoice := EmptyStr;
+          FPendingNote := EmptyStr;
           SaveData;
         end;
       psPending:
@@ -629,6 +645,7 @@ begin
           ShowSafeInfo('No record and the invoice has expired: it can no longer be paid. ' +
             'The pending invoice was cleared; you may fetch a new one.');
           FPendingInvoice := EmptyStr;
+          FPendingNote := EmptyStr;
           SaveData;
         end
         else
@@ -912,6 +929,8 @@ begin
       edtTokenRo.Text := LStr;
     if LJSONObj.TryGetValue<string>('pendingInvoice', LStr) then
       FPendingInvoice := LStr;
+    if LJSONObj.TryGetValue<string>('pendingNote', LStr) then
+      FPendingNote := LStr;
     if LJSONObj.TryGetValue<string>('pendingAddress', LStr) then
       edtSafeAddress.Text := LStr;
     if not FPendingInvoice.IsEmpty then
@@ -949,6 +968,7 @@ begin
     LJSONObj.AddPair('roToken', edtTokenRo.Text);
     // The PIN is never saved. The pending invoice is, so it can be checked after a restart.
     LJSONObj.AddPair('pendingInvoice', FPendingInvoice);
+    LJSONObj.AddPair('pendingNote', FPendingNote);
     LJSONObj.AddPair('pendingAddress', edtSafeAddress.Text);
     TFile.WriteAllText(CConfigFileName, LJSONObj.ToString);
   finally

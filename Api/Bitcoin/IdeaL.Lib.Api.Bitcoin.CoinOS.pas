@@ -195,7 +195,13 @@ type
     /// before any debit ("Routing fee of X required, max fee is Y"); a cap above
     /// max(1000, 5% of the amount) is refused too. (Up to 0.0.6 this was sent as "maxfee",
     /// which CoinOS ignores.) </param>
-    /// <param name="AMemo"> Optional memo stored with the payment. </param>
+    /// <param name="AMemo"> Optional note stored in CoinOS's own payment record. It is
+    /// NOT part of the Lightning payment: an external payee (any wallet that is not CoinOS)
+    /// never sees it. Only when the invoice belongs to another CoinOS user does CoinOS copy
+    /// the memo into the recipient's record. To send a note to an external payee, pass it
+    /// as the LNURL-pay comment when fetching the invoice (TLnurlPay.FetchInvoice AComment,
+    /// LUD-12); to see it on both sides, send the same text as comment and as memo.
+    /// See Api/Bitcoin/README.md, "Notes: memo (internal) and comment (to the payee)". </param>
     /// <param name="APin"> Required when the account has a PIN ("Invalid pin" otherwise). </param>
     /// <remarks>
     /// - Uses PaymentTimeout (default 90 s): CoinOS may hold the call about 60 s while paying.
@@ -257,7 +263,8 @@ type
     /// <param name="APin"> Required when the account has a PIN. </param>
     /// <remarks> CoinOS resolves the address, fetches the invoice and pays it inside this one
     /// call. The invoice is never returned before money moves, the invoice amount is not
-    /// checked against AAmount, and the memo cannot be set. If the call fails without an
+    /// checked against AAmount, and neither a memo nor an LNURL comment can be sent (CoinOS
+    /// stores the address's own description as memo, in practice an empty one). If the call fails without an
     /// answer you cannot find out whether it paid. When the payment must be tracked or
     /// retried safely, use the three-step path instead: TLnurlPay.Resolve and FetchInvoice
     /// (IdeaL.Lib.Api.Bitcoin.LnurlPay), TBolt11Decoder.Decode, PostPayment, GetPaymentState.

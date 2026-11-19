@@ -12,6 +12,20 @@ Changes made to this repository by AI agents, newest first. One entry per work s
 - Not done / not verified: <honest list>
 ```
 
+## 2026-11-19 — Memo versus LNURL comment: documentation and demo
+
+- Agent: Claude Code Opus 5.5
+- Branch / commits: `feature/coinos-safe-lnaddress-payment` — the commit that adds this entry. Nothing pushed.
+- Plan: [plans/2026-11-18-coinos-safe-lnaddress-payment.md](plans/2026-11-18-coinos-safe-lnaddress-payment.md) §11
+- Changed:
+  - `IdeaL.Lib.Api.Bitcoin.CoinOS.pas`: XMLDoc of `PostPayment` AMemo and `PostPaymentLnAddress` explain that the memo stays in CoinOS and that only the LNURL comment reaches an external payee.
+  - `IdeaL.Lib.Api.Bitcoin.LnurlPay.pas`: unit header section "Notes to the payee (comment) versus notes in your wallet (memo)" and XMLDoc of `FetchInvoice` AComment.
+  - `Api/Bitcoin/README.md`: "Notes: memo (internal) and comment (to the payee)" table.
+  - Demo: the "Note" field (was "Comment") goes to the payee as LUD-12 comment and to the CoinOS record as memo; it is saved with the pending invoice.
+  - Reply to the requester (outside the repository, `C:\Temp`) extended with this and with the live-test results.
+- Verified: demo compiles (dcc32, dcc64); DUnitX and fpcunit suites rerun (see commit). Live: 3 sats to the Wallet of Satoshi test address with the same text as comment and memo; the CoinOS record shows the memo.
+- Not done / not verified: that the Wallet of Satoshi app shows the comment (the maintainer checks it in the app).
+
 ## 2026-11-19 — Payment connect timeout fix; live external and concurrent double-payment tests
 
 - Agent: Claude Code Opus 5.5

@@ -37,6 +37,18 @@ When a payment must be tracked or retried, do the three steps yourself and keep 
    - `psPending` → in flight (can take long with hold invoices); check again later, never pay again.
    - `psNone` → no record: retry `PostPayment` with the **same** invoice while it has not expired.
 
+#### Notes: memo (internal) and comment (to the payee)
+
+There are three different texts, and none of them is a field the payer can add to an invoice:
+
+| Text | Who writes it | Who sees it | How to set it with this library |
+| ---- | ---- | ---- | ---- |
+| Invoice description | The payee, when the invoice is created. For Lightning addresses it is the address's own text (e.g. "Wallet of Satoshi: alice", "Paying alice@coinos.io"), and the invoice usually carries only its SHA-256 (`h`, shown by decoders as `purpose_commit_hash`), so decoders show no text. | Payee's wallet | You cannot. |
+| LNURL comment (LUD-12) | The payer, when asking for the invoice. | The payee's wallet (Wallet of Satoshi shows it as the payment note; CoinOS stores it as the memo of the received payment). | `TLnurlPay.FetchInvoice(request, amountMsat, 'comment')`, up to `request.CommentAllowed` characters (0 = not accepted). |
+| CoinOS memo | The payer, when paying. | The payer's CoinOS history. The recipient only when it is another CoinOS account (CoinOS copies it into the recipient's record). | `TAPICoinOS.PostPayment(invoice, fee, 'memo')` |
+
+So a payment integration that wants a note on both sides sends the same text twice: as `comment` in `FetchInvoice` (for the payee) and as `memo` in `PostPayment` (for its own records). `PostPaymentLnAddress` can send neither. Checked live on 2026-11-19 with CoinOS and Wallet of Satoshi accounts.
+
 How to read errors of `PostPayment`:
 
 - `EIdeaLApiError` (has `StatusCode` and `ResponseBody`): CoinOS answered with an error ("Invalid pin", "Routing fee of X required", "Insufficient funds", "Invoice has already been paid"…). Nothing was debited by that attempt; fix the cause and retry with the same invoice.

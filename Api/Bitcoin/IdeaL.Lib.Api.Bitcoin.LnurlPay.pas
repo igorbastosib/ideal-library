@@ -13,6 +13,21 @@ unit IdeaL.Lib.Api.Bitcoin.LnurlPay;
   FetchInvoice decodes the returned invoice and refuses it when its amount is
   not exactly the requested amount (LUD-06 step 7).
 
+  Notes to the payee (comment) versus notes in your wallet (memo)
+  - The invoice is written by the payee. Its description is the payee's own
+    text (e.g. "Wallet of Satoshi: alice"); for Lightning addresses it usually
+    holds only the SHA-256 of the metadata ("h", shown by decoders as
+    purpose_commit_hash), so decoders show no text at all.
+  - The only way for the payer to send a note to the payee is the LUD-12
+    comment: FetchInvoice(..., AComment) passes it to the payee's service when
+    the invoice is created, and the payee's wallet shows it (Wallet of Satoshi
+    shows it as the payment note; CoinOS stores it as the memo of the received
+    payment). It is not inside the invoice either. Allowed only when the
+    address advertises commentAllowed > 0, up to that many characters.
+  - The memo of a wallet API (e.g. TAPICoinOS.PostPayment AMemo) is a note in
+    the payer's own records; it does not travel over Lightning.
+  - Send the same text as comment and as memo to see it on both sides.
+
   Safety (on by default)
   - RequireHttps: the well-known URL and the callback must be https.
   - BlockPrivateHosts: the host of each URL (literal IP or every address the
@@ -129,6 +144,10 @@ type
     /// Checks min/maxSendable and the comment length before the call, and after it that
     /// the invoice decodes and asks for exactly AAmountMsat (and, with
     /// CheckDescriptionHash, that its h field is SHA-256 of the metadata). </summary>
+    /// <param name="AComment"> LUD-12 note for the PAYEE (shown in their wallet). Refused when
+    /// longer than ARequest.CommentAllowed (0 = the address accepts no comment). It is not a
+    /// memo in the payer's wallet: pass the same text to that wallet's memo too (e.g.
+    /// TAPICoinOS.PostPayment AMemo) to keep it on the payer's side. </param>
     function FetchInvoice(const ARequest: TLnurlPayRequest; AAmountMsat: Int64;
       const AComment: string = ''): string;
 
