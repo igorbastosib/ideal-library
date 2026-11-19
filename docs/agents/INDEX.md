@@ -8,7 +8,7 @@ Map of the repository for agents. Descriptions of units not yet studied by an ag
 | ---- | ---- |
 | `AGENTS.md`, `CLAUDE.md` | Rules for AI agents (`CLAUDE.md` only imports `AGENTS.md`). |
 | `README.md` | Public README (English). Says Bitbucket is the main repo and GitHub a copy. |
-| `boss.json` | Boss package manifest. `version` field says `0.0.5` while the latest tag on the GitHub mirror is `0.0.6` (checked 2026-11-18). |
+| `boss.json` | Boss package manifest. `version` set to `0.0.7` on `feature/coinos-safe-lnaddress-payment` (it said `0.0.5` while the latest tag on the GitHub mirror was `0.0.6`, checked 2026-11-18). The maintainer creates the matching tag. |
 | `LICENSE` | MIT. |
 | `IdeaL.Lib.*.pas` (root) | General-purpose FMX/RTL helper units, see below. |
 | `Api/` | HTTP integrations deriving from `TIdeaLApi`. |

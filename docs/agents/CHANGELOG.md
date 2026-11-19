@@ -24,7 +24,7 @@ Changes made to this repository by AI agents, newest first. One entry per work s
   - Demo: the "Note" field (was "Comment") goes to the payee as LUD-12 comment and to the CoinOS record as memo; it is saved with the pending invoice.
   - Reply to the requester (outside the repository, `C:\Temp`) extended with this and with the live-test results.
 - Verified: demo compiles (dcc32, dcc64); DUnitX and fpcunit suites rerun (see commit). Live: 3 sats to the Wallet of Satoshi test address with the same text as comment and memo; the CoinOS record shows the memo.
-- Not done / not verified: that the Wallet of Satoshi app shows the comment (the maintainer checks it in the app).
+- Confirmed afterwards by the maintainer: the Wallet of Satoshi app shows the comment as the note of the received payment (checked by invoice hash).
 
 ## 2026-11-19 — Payment connect timeout fix; live external and concurrent double-payment tests
 
