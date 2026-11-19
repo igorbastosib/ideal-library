@@ -2,7 +2,7 @@
 
 | Field | Value |
 | ---- | ---- |
-| Status | In progress — S0–S6 done; S7 internal tests (T1, T3, T8) passed 2026-11-19, external-wallet tests pending; S8 (release) is the maintainer's |
+| Status | In progress — S0–S6 done; S7 live tests T1, T2, T3, T6, T8 and concurrent double payment passed 2026-11-19 (T4 with a routing fee, T5, T7 pending); S8 (release) is the maintainer's |
 | Branch | `feature/coinos-safe-lnaddress-payment` |
 | Owner | Igor (maintainer) / Claude Code Opus 5.5 |
 | Created | 2026-11-18 |
@@ -364,3 +364,16 @@ Accounts: CoinOS **A** (payer, small balance), CoinOS **B** (recipient, internal
   | T8 | One-call `PostPaymentLnAddress` of 5 sats with the default fee 0 | First call: HTTP 500 "request timed out" from CoinOS, nothing debited (balance 130, no record): a server-side timeout while it resolved the address itself. After checking that, retried once: OK in 6.2 s, type internal, fee 0, memo empty (confirms the `metadata["text/plain"]` finding). Balance 130 → 125. This first failure is exactly the doubt case the three-step path removes: here the payment list could be checked by hand only because the account was otherwise idle. |
 
   Total sent to B: 15 sats. Not yet run: T2 (external wallet), T4 (fee cap below quote), T5 (PIN), T6 (client timeout on an external payment), T7 (expired invoice).
+- 2026-11-19 — Found while preparing T6: payment calls used a fixed 15 s connect timeout, so `PaymentTimeout(1000)` still let a call live ~16 s (the base deadline is connect + response). Fixed in `a317ebc`: the connect timeout of payment calls is min(15 s, PaymentTimeout). DUnitX 156/156, fpcunit 45/45.
+- 2026-11-19 — S7, second live run, approved by the maintainer (15 sats returned to A first; A = 140 sats). External payee C = a Wallet of Satoshi Lightning address. Results:
+
+  | Test | What | Result |
+  | ---- | ---- | ---- |
+  | T2 | Three-step external payment of 10 sats to C | WoS invoice: mainnet, 24 h expiry, `h` matches the metadata, no `d`, no `n`. `PostPayment` answered in 0.46 s: type lightning, confirmed true, fee 0, ourfee 0 (CoinOS seems to have a direct channel to WoS). `GetPaymentState` = psPaid at once. 140 → 130. |
+  | T4 | Fee cap below the quote | Not applicable to C: `PostLightningQuote` returned fee 0, so no positive cap lies below it. The same invoice was then paid without a cap: 130 → 125. Still to test against a payee with a routing fee. |
+  | T6 (300 ms) | `PaymentTimeout(300)` (deadline 600 ms) | The payment completed in 0.48 s, inside the deadline: no timeout happened. psPaid after 90 s, 125 → 120. |
+  | T6 (150 ms) | `PaymentTimeout(150)` (deadline 300 ms) | **The doubt case**: the client got no answer after 314 ms (`ENetHTTPClientException`, `IsTransportError` = True) while CoinOS paid. After 90 s `GetPaymentState` = psPaid, so the program did not retry: one debit only, 120 → 115. |
+  | C-int ×3 | The same 3 sat invoice to B paid by two threads released at the same instant | 3/3 rounds: one call paid (type internal), the other refused HTTP 500 "Invoice already paid"; one debit per round (115 → 112 → … ). |
+  | C-ext ×3 | The same 5 sat invoice to C paid by two threads released at the same instant | 3/3 rounds: one call paid, the other refused HTTP 500 "Invoice has already been paid" (round 1) or "Payment is already underway" (rounds 2 and 3, i.e. the second call arrived while the first was in flight); one debit per round. |
+
+  Reconciliation 2.5 minutes after the last call: balance 91 = 140 − 49 (10 + 5 + 5 + 5 + 3 × (3 + 5)); the payment list shows exactly those ten debits, all confirmed, no reversal and no late debit. Conclusion: in 6 concurrent rounds CoinOS never debited an invoice twice. The duplicate check in the server code is still not atomic (fact 7), so the rule "never two calls for one invoice in flight" stays in the docs; these runs show the window is narrow, not that it cannot be hit. Still not run: T4 against a payee with a routing fee, T5 (PIN), T7 (expired invoice).

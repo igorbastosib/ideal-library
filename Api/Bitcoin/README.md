@@ -46,7 +46,8 @@ Why the same invoice is the safe retry: CoinOS refuses to pay an invoice that is
 
 Rules of thumb:
 
-- Never run two `PostPayment` calls for the same invoice at the same time (CoinOS checks for duplicates before debiting, but not atomically).
+- Never run two `PostPayment` calls for the same invoice at the same time (CoinOS checks for duplicates before debiting, but not atomically). In live tests on 2026-11-19 (6 rounds, internal and external) CoinOS always debited once and refused the other call ("Invoice already paid", "Invoice has already been paid", "Payment is already underway"), but the window still exists in its code.
+- A client-side timeout does not mean the payment failed: in the same tests a call that gave up after 0.3 s was paid by CoinOS anyway. `GetPaymentState` reported it as paid, so no second payment was made.
 - `PostPayment` uses `PaymentTimeout` (default 90 s), above CoinOS's own ~60 s payment window.
 - `AFee` is a cap for the routing fee in sats; 0 lets CoinOS use its own quote. A cap below the quote, or above max(1000 sats, 5% of the amount), is refused before any debit. `PostLightningQuote` returns the quote.
 - `GET /payments/:invoice` is public: anyone holding the invoice can read the record. For an invoice of another CoinOS user it returns the **recipient's** record (positive amount, type `internal`), which still proves the payment.

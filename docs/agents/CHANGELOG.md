@@ -12,6 +12,15 @@ Changes made to this repository by AI agents, newest first. One entry per work s
 - Not done / not verified: <honest list>
 ```
 
+## 2026-11-19 — Payment connect timeout fix; live external and concurrent double-payment tests
+
+- Agent: Claude Code Opus 5.5
+- Branch / commits: `feature/coinos-safe-lnaddress-payment` — `a317ebc` (fix) and the docs commit that adds this entry. Nothing pushed.
+- Plan: [plans/2026-11-18-coinos-safe-lnaddress-payment.md](plans/2026-11-18-coinos-safe-lnaddress-payment.md) §11
+- Changed: `TAPICoinOS` payment calls use min(15 s, PaymentTimeout) as connect timeout, so a short PaymentTimeout really bounds the call (the demo's "simulate timeout" did not work before); tests added; README note on the observed concurrency behaviour; plan results.
+- Verified: DUnitX 156/156, fpcunit 45/45. Live (maintainer's test accounts, 49 sats): external payment to a Wallet of Satoshi address paid in 0.46 s with fee 0; a client-side timeout after 314 ms while CoinOS paid was resolved by `GetPaymentState` = psPaid with no second debit; the same invoice paid by two threads at the same instant was debited once in 6/6 rounds (3 internal, 3 external); balance reconciled with the payment list 2.5 minutes later.
+- Not done / not verified: fee cap below a non-zero quote (WoS quotes 0), PIN, expired invoice.
+
 ## 2026-11-19 — Merge of the sibling fixes and first live CoinOS tests
 
 - Agent: Claude Code Opus 5.5
