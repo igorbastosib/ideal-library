@@ -1,5 +1,9 @@
 unit IdeaL.Lib.Api.Bitcoin.DIGPIX;
 
+{$IFDEF FPC}
+{$mode objfpc}{$H+}
+{$ENDIF}
+
 interface
 
 uses
@@ -45,8 +49,9 @@ type
       AOnReceiveData: TReceiveDataEvent = nil);
 {$ENDIF}
 
-    function Get(AUrl: string): string;
-    function Post(AUrl, ABody: string): string;
+    // Virtual since 0.0.7 so that descendants and the tests under Tests/ can intercept requests.
+    function Get(AUrl: string): string; virtual;
+    function Post(AUrl, ABody: string): string; virtual;
     { protected declarations }
   public
     const
@@ -92,6 +97,24 @@ type
 
 implementation
 
+{$IFDEF FPC}
+uses
+  openssl, { This implements the procedure InitSSLInterface }
+  opensslsockets;
+{$ENDIF}
+
+{$IFDEF FPC}
+{ Error message in the format of the Delphi branch: "<code> <text>", plus
+  " - <body>" when AWithBody is True and the body is not blank. }
+function FpcErrorMessage(AHttpClient: TFPHttpClient; const ABody: string;
+  AWithBody: Boolean): string;
+begin
+  Result := IntToStr(AHttpClient.ResponseStatusCode) + ' ' + AHttpClient.ResponseStatusText;
+  if AWithBody and (Trim(ABody) <> '') then
+    Result := Result + ' - ' + ABody;
+end;
+{$ENDIF}
+
 { TAPIDigPix }
 
 function TAPIDigPix.AuthToken(AValue: string): TAPIDigPix;
@@ -112,7 +135,8 @@ procedure TAPIDigPix.GetNetHttpRequestLocal(
 begin
   GetHttpRequest(AHttpClient, AOnData);
   AHttpClient.AddHeader('Content-Type', 'application/json');
-  AHttpClient.AddHeader('Authorization', 'Bearer ' + FAuthToken);
+  // Same header as the Delphi Get/Post (the API moved from Bearer to X-API-Key in 6c5424f)
+  AHttpClient.AddHeader('X-API-Key', FAuthToken);
 end;
 {$ELSE}
 
@@ -135,7 +159,7 @@ function TAPIDigPix.Get(AUrl: string): string;
 {$IFDEF FPC}
 var
   LHttpClient: TFPHttpClient;
-  LResponse : TStringList;
+  LResponse : TStringStream;
 {$ELSE}
 var
   LHttp: THTTPClient;
@@ -146,13 +170,15 @@ begin
   InitSSLInterface;
   GetNetHttpRequestLocal(LHttpClient);
   try
-    LResponse := TStringList.Create;
+    LResponse := TStringStream.Create('');
     try
       LHttpClient.ConnectTimeout := 30000;
-      LHttpClient.Get(AUrl, LResponse);
+      // [] = TFPHttpClient does not check the status itself (its Get accepts
+      // only 200): the check below decides, as in the Delphi branch
+      LHttpClient.HTTPMethod('GET', AUrl, LResponse, []);
       if LHttpClient.ResponseStatusCode <> 200 then
-        raise exception.create(LHttpClient.ResponseStatusText);
-      Result := LResponse.Text;
+        raise Exception.Create(FpcErrorMessage(LHttpClient, LResponse.DataString, True));
+      Result := LResponse.DataString;
     finally
       LResponse.Free;
     end;
@@ -197,7 +223,7 @@ function TAPIDigPix.Post(AUrl, ABody: string): string;
 {$IFDEF FPC}
 var
   LHttpClient: TFPHttpClient;
-  LResponse : TStringList;
+  LResponse : TStringStream;
 {$ELSE}
 var
   LHttp: THTTPClient;
@@ -208,14 +234,16 @@ begin
   InitSSLInterface;
   GetNetHttpRequestLocal(LHttpClient);
   try
-    LResponse := TStringList.Create;
+    LResponse := TStringStream.Create('');
     LHttpClient.RequestBody := TRawByteStringStream.Create(ABody);
     try
       LHttpClient.ConnectTimeout := 30000;
-      LHttpClient.Post(AUrl, LResponse);
+      // [] = TFPHttpClient does not check the status itself (its Get accepts
+      // only 200): the check below decides, as in the Delphi branch
+      LHttpClient.HTTPMethod('POST', AUrl, LResponse, []);
       if LHttpClient.ResponseStatusCode <> 200 then
-        raise exception.create(LHttpClient.ResponseStatusText);
-      Result := LResponse.Text;
+        raise Exception.Create(FpcErrorMessage(LHttpClient, LResponse.DataString, True));
+      Result := LResponse.DataString;
     finally
       LHttpClient.RequestBody.Free;
       LResponse.Free;
@@ -262,11 +290,12 @@ begin
 end;
 
 function TAPIDigPix.GetQrCode(AOrderId: string): string;
+var
+  LUrl: string;
 begin
   if (Trim(AOrderId).IsEmpty) then
     raise Exception.Create('Invalid value [qr_id]');
 
-  var
   LUrl := Format('%s%s/%s', [CUrlApi, 'qrcode', AOrderId]);
   Result := Get(LUrl);
 end;
@@ -346,14 +375,14 @@ begin
     LJsonObject := LJsonData as TJSONObject;
     LJsonObject.Add('amount_cents', Trunc(AAmount));
     LJsonObject.Add('document', ADocument);
-    if Trim(APaymentMethod) <> EmtpyStr then
-      LJSONObj.Add('payment_method', APaymentMethod);
-    if Trim(AObservation) <> EmtpyStr then
-      LJSONObj.Add('observation', AObservation);
-    if Trim(AWebHook) <> EmtpyStr then
-      LJSONObj.Add('webhook', AWebHook);
-    if Trim(ASecret) <> EmtpyStr then
-      LJSONObj.Add('secret', ASecret);
+    if Trim(APaymentMethod) <> EmptyStr then
+      LJsonObject.Add('payment_method', APaymentMethod);
+    if Trim(AObservation) <> EmptyStr then
+      LJsonObject.Add('observation', AObservation);
+    if Trim(AWebHook) <> EmptyStr then
+      LJsonObject.Add('webhook', AWebHook);
+    if Trim(ASecret) <> EmptyStr then
+      LJsonObject.Add('secret', ASecret);
     LBody := TJSONObject(LJsonData).AsJSON;
   finally
     LJsonData.Free;

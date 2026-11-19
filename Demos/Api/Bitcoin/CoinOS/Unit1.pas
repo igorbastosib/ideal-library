@@ -7,7 +7,11 @@ uses
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
   FMX.Controls.Presentation, FMX.StdCtrls, FMX.Edit, FMX.Layouts,
   FMX.Memo.Types, FMX.ScrollBox, FMX.Memo, FMX.TabControl, FMX.ListBox,
-  FMX.Objects, FMX.DateTimeCtrls;
+  FMX.Objects, FMX.DateTimeCtrls,
+
+  IdeaL.Lib.Api.Bitcoin.CoinOS,
+  IdeaL.Lib.Api.Bitcoin.LnurlPay,
+  IdeaL.Lib.Bitcoin.Bolt11;
 
 type
   TForm1 = class(TForm)
@@ -115,6 +119,31 @@ type
     Layout1: TLayout;
     Label37: TLabel;
     edtXApiKey: TEdit;
+    lblPayMemo: TLabel;
+    edtPayMemo: TEdit;
+    lblPayPin: TLabel;
+    edtPayPin: TEdit;
+    btnCheckPayment: TButton;
+    lblPayLnAddressPin: TLabel;
+    edtPayLnAddressPin: TEdit;
+    gbxSafeLnAddress: TGroupBox;
+    lblSafeHelp: TLabel;
+    lblSafeAddress: TLabel;
+    edtSafeAddress: TEdit;
+    lblSafeAmount: TLabel;
+    edtSafeAmount: TEdit;
+    lblSafeComment: TLabel;
+    edtSafeComment: TEdit;
+    lblSafeFee: TLabel;
+    edtSafeFee: TEdit;
+    lblSafePin: TLabel;
+    edtSafePin: TEdit;
+    btnSafeResolve: TButton;
+    btnSafeFetch: TButton;
+    btnSafePay: TButton;
+    btnSafeCheck: TButton;
+    chkSafeSimulateTimeout: TCheckBox;
+    lblSafeInfo: TLabel;
     procedure Label1Click(Sender: TObject);
     procedure btnInvoiceLNCreateClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -138,9 +167,30 @@ type
     procedure FormCreate(Sender: TObject);
     procedure btnGetPaymentsClick(Sender: TObject);
     procedure btnPayLnAddressClick(Sender: TObject);
+    procedure btnCheckPaymentClick(Sender: TObject);
+    procedure btnSafeResolveClick(Sender: TObject);
+    procedure btnSafeFetchClick(Sender: TObject);
+    procedure btnSafePayClick(Sender: TObject);
+    procedure btnSafeCheckClick(Sender: TObject);
   private
     const
     CConfigFileName = 'config.json';
+    // Never pay an invoice that expires within this margin (seconds)
+    CExpiryMarginSec = 60;
+    var
+    // Three-step flow state. The pending invoice is also saved in config.json,
+    // so that "4. Check status" still works after a crash or restart.
+    FSafeRequest: TLnurlPayRequest;
+    FSafeResolvedAddress: string;
+    FPendingInvoice: string;
+    // The note of the pending payment: sent to the payee as LNURL comment when
+    // the invoice is fetched, and kept as memo in our CoinOS record when paying.
+    FPendingNote: string;
+
+    function NewCoinOS: TAPICoinOS;
+    procedure ShowSafeInfo(const AText: string);
+    procedure ReportPaymentError(E: Exception);
+    function DescribeInvoice(const AInvoice: TBolt11): string;
 
     procedure SaveData;
     procedure LoadData;
@@ -173,7 +223,7 @@ uses
   System.Net.HttpClientComponent,
 
   IdeaL.Lib.Utils,
-  IdeaL.Lib.Api.Bitcoin.CoinOS;
+  IdeaL.Lib.Api;
 
 {$R *.fmx}
 
@@ -328,16 +378,66 @@ begin
   end;
 end;
 
+function TForm1.NewCoinOS: TAPICoinOS;
+begin
+  Result := TAPICoinOS.Create;
+  Result.AuthToken(edtExportedToken.Text);
+end;
+
+procedure TForm1.ReportPaymentError(E: Exception);
+begin
+  if E is EIdeaLApiError then
+    // CoinOS answered: nothing was debited by this attempt
+    AddLog('CoinOS refused (HTTP ' + EIdeaLApiError(E).StatusCode.ToString + '): ' +
+      EIdeaLApiError(E).ResponseBody)
+  else if TIdeaLApi.IsTransportError(E) then
+    // no answer: the payment may or may not have happened
+    AddLog('No answer from CoinOS (' + E.ClassName + '). The payment MAY have happened: ' +
+      'wait a couple of minutes and check its status before trying again.')
+  else
+    AddLog(E.ClassName + ': ' + E.Message);
+end;
+
 procedure TForm1.btnPayClick(Sender: TObject);
 begin
+  // POST /payments: "fee" caps the routing fee (0 = let CoinOS use its quote),
+  // "pin" is needed when the account has a PIN.
   var
-  LApiCoinOS := TAPICoinOS.Create;
+  LApiCoinOS := NewCoinOS;
   try
-    LApiCoinOS.AuthToken(edtExportedToken.Text);
+    try
+      var
+      LResult := LApiCoinOS.PostPayment(edtPayInvoice.Text, StrToIntDef(edtMaxFee.Text, 0),
+        edtPayMemo.Text, edtPayPin.Text);
+      AddListBox(LResult);
+      AddLog(LResult);
+    except
+      on E: Exception do
+      begin
+        ReportPaymentError(E);
+        raise;
+      end;
+    end;
+  finally
+    LApiCoinOS.Free;
+  end;
+end;
+
+procedure TForm1.btnCheckPaymentClick(Sender: TObject);
+begin
+  // GET /payments/:invoice is public; CoinOS answers "null" when there is no record
+  var
+  LApiCoinOS := NewCoinOS;
+  try
     var
-    LResult := LApiCoinOS.PostPayment(edtPayInvoice.Text, StrToInt(edtMaxFee.Text));
-    AddListBox(LResult);
-    AddLog(LResult);
+    LRecord := EmptyStr;
+    case LApiCoinOS.GetPaymentState(edtPayInvoice.Text, LRecord) of
+      psNone: AddLog('No payment record for this invoice (never paid, refused before the debit, or reversed).');
+      psPending: AddLog('Payment in flight (confirmed = false). Check again later; do not pay again.');
+      psPaid: AddLog('Paid (confirmed = true).');
+    end;
+    if not LRecord.IsEmpty then
+      AddListBox(LRecord);
   finally
     LApiCoinOS.Free;
   end;
@@ -345,18 +445,213 @@ end;
 
 procedure TForm1.btnPayLnAddressClick(Sender: TObject);
 begin
+  // One call: CoinOS resolves the address, fetches and pays the invoice.
+  // The invoice is not known before money moves, so a failed call cannot be
+  // checked afterwards. Use the "3 steps" box when the payment must be tracked.
   var
-  LMaxFee := StrToInt(edtPayLnAmountMaxFee.Text);
+  LMaxFee := StrToIntDef(edtPayLnAmountMaxFee.Text, 0);
   var
   LAmount := StrToInt(edtPayLnAddressAmount.Text);
   var
-  LApiCoinOS := TAPICoinOS.Create;
+  LApiCoinOS := NewCoinOS;
   try
-    LApiCoinOS.AuthToken(edtExportedToken.Text);
+    try
+      var
+      LResult := LApiCoinOS.PostPaymentLnAddress(edtPayLnAddressAddress.Text, LAmount, LMaxFee,
+        edtPayLnAddressPin.Text);
+      AddListBox(LResult);
+      AddLog(LResult);
+    except
+      on E: Exception do
+      begin
+        ReportPaymentError(E);
+        raise;
+      end;
+    end;
+  finally
+    LApiCoinOS.Free;
+  end;
+end;
+
+{ Three-step payment of a Lightning address }
+
+procedure TForm1.ShowSafeInfo(const AText: string);
+begin
+  lblSafeInfo.Text := AText;
+  AddLog(AText);
+end;
+
+function TForm1.DescribeInvoice(const AInvoice: TBolt11): string;
+begin
+  Result := Format('Invoice: %d sats, expires %s (local time), payment hash %s...',
+    [AInvoice.AmountSat,
+     DateTimeToStr(TTimeZone.Local.ToLocalTime(AInvoice.ExpiresAtUtc)),
+     Copy(AInvoice.PaymentHash, 1, 16)]);
+  if AInvoice.HasDescription then
+    Result := Result + ' Description: "' + AInvoice.Description + '".'
+  else if AInvoice.MatchesMetadata(FSafeRequest.Metadata) then
+    Result := Result + ' Description hash matches the address metadata.';
+end;
+
+procedure TForm1.btnSafeResolveClick(Sender: TObject);
+begin
+  // Step 1: GET https://<domain>/.well-known/lnurlp/<user> (LUD-16 / LUD-06)
+  var
+  LLnurl := TLnurlPay.Create;
+  try
+    FSafeRequest := LLnurl.Resolve(edtSafeAddress.Text);
+    FSafeResolvedAddress := FSafeRequest.Address;
+    AddListBox(FSafeRequest.RawJson);
+    ShowSafeInfo(Format('%s accepts %d..%d sats. "%s". Comment up to %d characters. Step 2: fetch the invoice.',
+      [FSafeRequest.Address, FSafeRequest.MinSendableSat, FSafeRequest.MaxSendableSat,
+       FSafeRequest.Description, FSafeRequest.CommentAllowed]));
+  finally
+    LLnurl.Free;
+  end;
+end;
+
+procedure TForm1.btnSafeFetchClick(Sender: TObject);
+var
+  LUser, LDomain: string;
+begin
+  // Step 2: GET <callback>?amount=<msat>, then decode and check the invoice
+  if not TLnurlPay.ParseAddress(edtSafeAddress.Text, LUser, LDomain) or
+     (LUser + '@' + LDomain <> FSafeResolvedAddress) then
+    raise Exception.Create('Resolve the address first (step 1).');
+  if not FPendingInvoice.IsEmpty then
+    raise Exception.Create('There is a pending invoice. Check its status (step 4) before fetching a new one.');
+
+  var
+  LAmountMsat: Int64 := StrToInt64(edtSafeAmount.Text) * 1000;
+  var
+  LLnurl := TLnurlPay.Create;
+  try
+    // FetchInvoice already refuses an invoice whose amount differs from the request
     var
-    LResult := LApiCoinOS.PostPaymentLnAddress(edtPayLnAddressAddress.Text, LAmount, LMaxFee);
-    AddListBox(LResult);
-    AddLog(LResult);
+    LInvoiceText := LLnurl.FetchInvoice(FSafeRequest, LAmountMsat, edtSafeComment.Text);
+    var
+    LInvoice := TBolt11Decoder.Decode(LInvoiceText);
+    if LInvoice.Network <> bnMainnet then
+      raise Exception.Create('The invoice is not for Bitcoin mainnet; CoinOS cannot pay it.');
+    if LInvoice.IsExpired(TTimeZone.Local.ToUniversalTime(Now), CExpiryMarginSec) then
+      raise Exception.Create('The invoice expires too soon; fetch it again.');
+
+    // Store the invoice BEFORE paying it
+    FPendingInvoice := LInvoice.Invoice;
+    FPendingNote := edtSafeComment.Text;
+    SaveData;
+    edtPayInvoice.Text := FPendingInvoice;
+    ShowSafeInfo(DescribeInvoice(LInvoice) + ' Saved. Step 3: pay.');
+  finally
+    LLnurl.Free;
+  end;
+end;
+
+procedure TForm1.btnSafePayClick(Sender: TObject);
+begin
+  // Step 3: POST /payments with the stored invoice. Paying the SAME invoice
+  // again is refused by CoinOS, so retrying this step is safe; never replace
+  // the invoice while it may still be paid.
+  if FPendingInvoice.IsEmpty then
+    raise Exception.Create('No pending invoice. Fetch one first (step 2).');
+  var
+  LInvoice := TBolt11Decoder.Decode(FPendingInvoice);
+  if LInvoice.IsExpired(TTimeZone.Local.ToUniversalTime(Now), 30) then
+    raise Exception.Create('The pending invoice has expired. Check its status (step 4) before fetching a new one.');
+
+  var
+  LApiCoinOS := NewCoinOS;
+  try
+    // Before paying again, make sure the previous attempt did not go through
+    var
+    LRecord := EmptyStr;
+    case LApiCoinOS.GetPaymentState(FPendingInvoice, LRecord) of
+      psPaid:
+        begin
+          ShowSafeInfo('Already paid. Nothing to do.');
+          Exit;
+        end;
+      psPending:
+        begin
+          ShowSafeInfo('A payment of this invoice is in flight. Check its status later (step 4).');
+          Exit;
+        end;
+    end;
+
+    if chkSafeSimulateTimeout.IsChecked then
+      LApiCoinOS.PaymentTimeout(1000);
+
+    // Two different notes:
+    // - the Comment field already went to the PAYEE as LNURL comment (LUD-12)
+    //   in step 2; an external wallet shows that text, never our memo;
+    // - the memo below is stored in OUR CoinOS payment record (and copied to
+    //   the recipient only when it is another CoinOS account).
+    // Using the same text for both keeps the note on both sides.
+    var
+    LMemo := FPendingNote;
+    if LMemo.IsEmpty then
+      LMemo := 'LN address ' + FSafeResolvedAddress;
+    try
+      var
+      LResult := LApiCoinOS.PostPayment(FPendingInvoice, StrToIntDef(edtSafeFee.Text, 0),
+        LMemo, edtSafePin.Text);
+      AddListBox(LResult);
+      ShowSafeInfo('CoinOS accepted the payment. Step 4 shows when it is confirmed.');
+    except
+      on E: Exception do
+      begin
+        ReportPaymentError(E);
+        if E is EIdeaLApiError then
+          ShowSafeInfo('CoinOS refused this attempt (nothing debited): ' + EIdeaLApiError(E).ResponseBody +
+            '. Fix the cause and press 3 again; the same invoice is kept.')
+        else
+          ShowSafeInfo('No answer. The payment may have happened. Wait a couple of minutes, then press 4.');
+      end;
+    end;
+  finally
+    LApiCoinOS.Free;
+  end;
+end;
+
+procedure TForm1.btnSafeCheckClick(Sender: TObject);
+begin
+  // Step 4: GET /payments/:invoice
+  if FPendingInvoice.IsEmpty then
+    raise Exception.Create('No pending invoice.');
+  var
+  LInvoice := TBolt11Decoder.Decode(FPendingInvoice);
+  var
+  LApiCoinOS := NewCoinOS;
+  try
+    var
+    LRecord := EmptyStr;
+    case LApiCoinOS.GetPaymentState(FPendingInvoice, LRecord) of
+      psPaid:
+        begin
+          AddListBox(LRecord);
+          ShowSafeInfo('Paid. The pending invoice was cleared.');
+          FPendingInvoice := EmptyStr;
+          FPendingNote := EmptyStr;
+          SaveData;
+        end;
+      psPending:
+        begin
+          AddListBox(LRecord);
+          ShowSafeInfo('In flight (confirmed = false). Check again later; do not pay again.');
+        end;
+      psNone:
+        if LInvoice.IsExpired(TTimeZone.Local.ToUniversalTime(Now)) then
+        begin
+          ShowSafeInfo('No record and the invoice has expired: it can no longer be paid. ' +
+            'The pending invoice was cleared; you may fetch a new one.');
+          FPendingInvoice := EmptyStr;
+          FPendingNote := EmptyStr;
+          SaveData;
+        end
+        else
+          ShowSafeInfo('No record yet. If no payment call is running, press 3 to retry with the SAME invoice. ' +
+            DescribeInvoice(LInvoice));
+    end;
   finally
     LApiCoinOS.Free;
   end;
@@ -495,12 +790,33 @@ procedure TForm1.btnLoginClick(Sender: TObject);
 begin
   var
   LApiCoinOS := TAPICoinOS.Create;
-  try    
+  try
     var
-    LResult :=
-      LApiCoinOS
-      .HeaderArray([TAPICoinOS.THeaderPair.Create('x-api-key', edtXApiKey.Text)])
-      .PostLogin(edtUsername.Text, edtPassword.Text);
+    LResult := EmptyStr;
+    try
+      // An empty x-api-key is simply not sent (since 0.0.7)
+      LResult :=
+        LApiCoinOS
+        .HeaderArray([TAPICoinOS.THeaderPair.Create('x-api-key', edtXApiKey.Text)])
+        .PostLogin(edtUsername.Text, edtPassword.Text);
+    except
+      on E: EIdeaLApiError do
+      begin
+        // CoinOS only lets API logins through with a reCAPTCHA token, an
+        // x-api-key registered by the CoinOS team, or an allowlisted account.
+        if (E.StatusCode = 401) and E.ResponseBody.ToLower.Contains('captcha') then
+        begin
+          AddLog('Login refused by CoinOS: ' + E.ResponseBody);
+          ShowMessage(
+            'CoinOS refused the login: "' + E.ResponseBody + '".' + sLineBreak + sLineBreak +
+            'Logging in through the API needs a captcha, unless CoinOS gave you an x-api-key.' + sLineBreak +
+            'Instead, log in on coinos.io, copy your token (see Demos\Api\Bitcoin\CoinOS\AuthToken.jpg) ' +
+            'and paste it in "Exported token".');
+          Exit;
+        end;
+        raise;
+      end;
+    end;
     var
     LJSONObj := TJSONObject.ParseJSONValue(LResult) as TJSONObject;
     // edtExportedToken.OnTyping := False;
@@ -543,7 +859,10 @@ end;
 procedure TForm1.Label17Click(Sender: TObject);
 begin
   ShowMessage(
-    'If you get Route related errors, try to increase the MAX FEE'
+    'Fee cap = maximum Lightning routing fee in sats (0 = CoinOS uses its own route quote).' + sLineBreak +
+    'A cap below the quote is refused before any debit ("Routing fee of X required").' + sLineBreak +
+    'A cap above max(1000, 5% of the amount) is refused too.' + sLineBreak +
+    'Accounts with a PIN must fill the PIN field.'
     );
 end;
 
@@ -608,6 +927,14 @@ begin
       edtXApiKey.Text := LStr;
     if LJSONObj.TryGetValue<string>('roToken', LStr) then
       edtTokenRo.Text := LStr;
+    if LJSONObj.TryGetValue<string>('pendingInvoice', LStr) then
+      FPendingInvoice := LStr;
+    if LJSONObj.TryGetValue<string>('pendingNote', LStr) then
+      FPendingNote := LStr;
+    if LJSONObj.TryGetValue<string>('pendingAddress', LStr) then
+      edtSafeAddress.Text := LStr;
+    if not FPendingInvoice.IsEmpty then
+      lblSafeInfo.Text := 'There is a pending invoice from a previous run: press 4. Check status.';
   finally
     LJSONObj.Free;
   end;
@@ -639,6 +966,10 @@ begin
     LJSONObj.AddPair('exportedToken', edtExportedToken.Text);
     LJSONObj.AddPair('xapikey', edtXApiKey.Text);
     LJSONObj.AddPair('roToken', edtTokenRo.Text);
+    // The PIN is never saved. The pending invoice is, so it can be checked after a restart.
+    LJSONObj.AddPair('pendingInvoice', FPendingInvoice);
+    LJSONObj.AddPair('pendingNote', FPendingNote);
+    LJSONObj.AddPair('pendingAddress', edtSafeAddress.Text);
     TFile.WriteAllText(CConfigFileName, LJSONObj.ToString);
   finally
     LJSONObj.Free;

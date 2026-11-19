@@ -1,0 +1,59 @@
+program IdeaLLibTests;
+
+{ DUnitX console runner for ideal-library.
+  Build and run from the command line with Tests\Delphi\run-tests.ps1, or open
+  this file in RAD Studio (it creates the .dproj) and run it as a console app.
+  Target: Win64 (DUnitX ships for Win64 in RAD Studio 12).
+  No test touches the network: HTTP tests use an in-process server on 127.0.0.1. }
+
+{$APPTYPE CONSOLE}
+{$STRONGLINKTYPES ON}
+
+uses
+  System.SysUtils,
+  DUnitX.TestFramework,
+  DUnitX.Loggers.Console,
+  DUnitX.Loggers.XML.NUnit,
+  Test.LocalHttpServer in 'Test.LocalHttpServer.pas',
+  Test.IdeaL.Lib.Api.Compat in 'Test.IdeaL.Lib.Api.Compat.pas',
+  Test.IdeaL.Lib.Api in 'Test.IdeaL.Lib.Api.pas',
+  Test.IdeaL.Lib.Bitcoin.Bolt11 in 'Test.IdeaL.Lib.Bitcoin.Bolt11.pas',
+  Test.IdeaL.Lib.Api.Bitcoin.CoinOS in 'Test.IdeaL.Lib.Api.Bitcoin.CoinOS.pas',
+  Test.IdeaL.Lib.Api.Bitcoin.LnurlPay in 'Test.IdeaL.Lib.Api.Bitcoin.LnurlPay.pas',
+  Test.IdeaL.Lib.Api.Bitcoin.Alby in 'Test.IdeaL.Lib.Api.Bitcoin.Alby.pas',
+  Test.IdeaL.Lib.Api.Bitcoin.DePIX in 'Test.IdeaL.Lib.Api.Bitcoin.DePIX.pas',
+  Test.IdeaL.Lib.Api.Bitcoin.DIGPIX in 'Test.IdeaL.Lib.Api.Bitcoin.DIGPIX.pas',
+  Test.IdeaL.Lib.Api.Bitcoin.Exchange in 'Test.IdeaL.Lib.Api.Bitcoin.Exchange.pas',
+  Bolt11Vectors in '..\Shared\Bolt11Vectors.pas',
+  IdeaL.Lib.Api in '..\..\Api\IdeaL.Lib.Api.pas',
+  IdeaL.Lib.Bitcoin.Bolt11 in '..\..\Api\Bitcoin\IdeaL.Lib.Bitcoin.Bolt11.pas',
+  IdeaL.Lib.Api.Bitcoin.CoinOS in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.CoinOS.pas',
+  IdeaL.Lib.Api.Bitcoin.LnurlPay in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.LnurlPay.pas',
+  IdeaL.Lib.Api.Bitcoin.Alby in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.Alby.pas',
+  IdeaL.Lib.Api.Bitcoin.DePIX in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.DePIX.pas',
+  IdeaL.Lib.Api.Bitcoin.DIGPIX in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.DIGPIX.pas',
+  IdeaL.Lib.Api.Bitcoin.Exchange in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.Exchange.pas';
+
+var
+  LRunner: ITestRunner;
+  LResults: IRunResults;
+begin
+  ReportMemoryLeaksOnShutdown := True;
+  try
+    TDUnitX.CheckCommandLine;
+    LRunner := TDUnitX.CreateRunner;
+    LRunner.UseRTTI := True;
+    LRunner.FailsOnNoAsserts := False;
+    LRunner.AddLogger(TDUnitXConsoleLogger.Create(True));
+    LRunner.AddLogger(TDUnitXXMLNUnitFileLogger.Create(TDUnitX.Options.XMLOutputFile));
+    LResults := LRunner.Execute;
+    if not LResults.AllPassed then
+      System.ExitCode := EXIT_ERRORS;
+  except
+    on E: Exception do
+    begin
+      System.Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := EXIT_ERRORS;
+    end;
+  end;
+end.
