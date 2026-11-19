@@ -72,6 +72,10 @@ type
     /// HeaderArray, then the per-call headers. </summary>
     function BuildHeaders(const AExtra: TNetHeaders): TNetHeaders;
     function Url(const APath: string): string;
+    /// <summary> Connect timeout of payment calls: CPaymentConnectTimeout, but never
+    /// more than PaymentTimeout, so that a short PaymentTimeout really bounds the call
+    /// (the base class deadline is connect + response timeout). </summary>
+    function PaymentConnectTimeout: Integer;
     { private declarations }
   protected
 {$IFDEF FPC}
@@ -120,7 +124,9 @@ type
     function BaseUrl: string; overload;
 
     /// <summary> Response timeout (ms) used by PostPayment and PostPaymentLnAddress.
-    /// Default CDefaultPaymentTimeout (90 s). </summary>
+    /// Default CDefaultPaymentTimeout (90 s). The connect timeout of those calls is
+    /// CPaymentConnectTimeout (15 s) or this value when smaller, so the whole call
+    /// never takes more than about twice this value. </summary>
     function PaymentTimeout(AValue: Integer): TAPICoinOS; overload;
     function PaymentTimeout: Integer; overload;
 
@@ -355,6 +361,13 @@ begin
   SetLength(FHeaderArray, 0);
   FBaseUrl := CUrlApi;
   FPaymentTimeout := CDefaultPaymentTimeout;
+end;
+
+function TAPICoinOS.PaymentConnectTimeout: Integer;
+begin
+  Result := CPaymentConnectTimeout;
+  if FPaymentTimeout < Result then
+    Result := FPaymentTimeout;
 end;
 
 function TAPICoinOS.Url(const APath: string): string;
@@ -617,7 +630,7 @@ begin
   finally
     LJSONObj.Free;
   end;
-  Result := Post(Url('payments'), LBody, nil, CPaymentConnectTimeout, FPaymentTimeout);
+  Result := Post(Url('payments'), LBody, nil, PaymentConnectTimeout, FPaymentTimeout);
 end;
 
 function TAPICoinOS.GetPayment(AInvoice: string): string;
@@ -732,7 +745,7 @@ begin
     LJSONObj.Free;
   end;
   Result := Post(Url('send/' + AAddress + '/' + IntToStr(AAmount)), LBody, nil,
-    CPaymentConnectTimeout, FPaymentTimeout);
+    PaymentConnectTimeout, FPaymentTimeout);
 end;
 
 function TAPICoinOS.PostPaymentToUser(AAmount: Integer;

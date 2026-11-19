@@ -40,6 +40,8 @@ type
     [Test]
     procedure PostLogin_EmptyXApiKey_DoesNotRaise;
     [Test]
+    procedure PostPayment_ShortPaymentTimeout_BoundsWholeCall;
+    [Test]
     procedure Compat_PostUser_SendsJsonAsIs;
     [Test]
     procedure Compat_PostInvoice_Bodies;
@@ -90,6 +92,7 @@ implementation
 uses
   System.SysUtils,
   System.DateUtils,
+  System.Diagnostics,
   System.Net.URLClient,
   IdeaL.Lib.Api;
 
@@ -416,6 +419,14 @@ begin
     Assert.AreEqual(90000, LApi.LastResponse);
     LApi.PaymentTimeout(120000).PostPaymentLnAddress('a@b.example', 10);
     Assert.AreEqual(120000, LApi.LastResponse);
+    Assert.AreEqual(TAPICoinOS.CPaymentConnectTimeout, LApi.LastConnect);
+    // a short PaymentTimeout also bounds the connect timeout (whole call ~2x)
+    LApi.PaymentTimeout(1000).PostPayment(CInvoice);
+    Assert.AreEqual(1000, LApi.LastResponse);
+    Assert.AreEqual(1000, LApi.LastConnect);
+    LApi.PaymentTimeout(1000).PostPaymentLnAddress('a@b.example', 10);
+    Assert.AreEqual(1000, LApi.LastConnect);
+    LApi.PaymentTimeout(120000);
     LApi.PostInvoiceLightning(1);
     Assert.AreEqual(TAPICoinOS.CDefaultResponseTimeout, LApi.LastResponse, 'other calls keep the default');
   finally
@@ -647,6 +658,40 @@ begin
   finally
     LApi.Free;
   end;
+end;
+
+procedure TCoinOSTests.PostPayment_ShortPaymentTimeout_BoundsWholeCall;
+var
+  LApi: TAPICoinOS;
+  LWatch: TStopwatch;
+  LTransport: Boolean;
+begin
+  // Up to the first 0.0.7 draft the payment connect timeout was a fixed 15 s,
+  // so PaymentTimeout(300) still let the call live about 15 s.
+  FServer.Handler :=
+    procedure(const ARequest: TTestRequest; AResponse: TTestResponse)
+    begin
+      AResponse.DelayMs := 3000;
+      AResponse.Body := '{}';
+    end;
+  LApi := NewApi;
+  try
+    LApi.PaymentTimeout(300);
+    LTransport := False;
+    LWatch := TStopwatch.StartNew;
+    try
+      LApi.PostPayment(CInvoice);
+    except
+      on E: Exception do
+        LTransport := TIdeaLApi.IsTransportError(E);
+    end;
+    LWatch.Stop;
+    Assert.IsTrue(LTransport, 'no answer = transport error');
+    Assert.IsTrue(LWatch.ElapsedMilliseconds < 1500, 'call bounded: ' + LWatch.ElapsedMilliseconds.ToString + ' ms');
+  finally
+    LApi.Free;
+  end;
+  Sleep(2800); // let the delayed server thread finish
 end;
 
 initialization
