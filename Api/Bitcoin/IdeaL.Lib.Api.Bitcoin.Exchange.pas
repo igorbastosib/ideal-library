@@ -1,4 +1,8 @@
 unit IdeaL.Lib.Api.Bitcoin.Exchange;
+
+{$IFDEF FPC}
+{$mode objfpc}{$H+}
+{$ENDIF}
 {******************************************************************************
 
 ******************************************************************************}
@@ -212,9 +216,10 @@ begin
 {$ELSE}
   var
   LHeader: TNetHeaders;
+  // No Authorization header: these are public price APIs (it was removed from
+  // Get in 7175dfe, "Removing Authorization from Exchange API"; Post was missed).
   LHeader :=
     [
-      TNameValuePair.Create('Authorization', 'Bearer ' + FAuthToken),
       TNameValuePair.Create('Content-Type', 'application/json; charset=utf-8'),
       TNameValuePair.Create('Accept', '*/*')
     ];

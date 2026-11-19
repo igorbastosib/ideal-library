@@ -23,6 +23,7 @@ uses
   Test.IdeaL.Lib.Api.Bitcoin.Alby in 'Test.IdeaL.Lib.Api.Bitcoin.Alby.pas',
   Test.IdeaL.Lib.Api.Bitcoin.DePIX in 'Test.IdeaL.Lib.Api.Bitcoin.DePIX.pas',
   Test.IdeaL.Lib.Api.Bitcoin.DIGPIX in 'Test.IdeaL.Lib.Api.Bitcoin.DIGPIX.pas',
+  Test.IdeaL.Lib.Api.Bitcoin.Exchange in 'Test.IdeaL.Lib.Api.Bitcoin.Exchange.pas',
   Bolt11Vectors in '..\Shared\Bolt11Vectors.pas',
   IdeaL.Lib.Api in '..\..\Api\IdeaL.Lib.Api.pas',
   IdeaL.Lib.Bitcoin.Bolt11 in '..\..\Api\Bitcoin\IdeaL.Lib.Bitcoin.Bolt11.pas',
@@ -30,7 +31,8 @@ uses
   IdeaL.Lib.Api.Bitcoin.LnurlPay in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.LnurlPay.pas',
   IdeaL.Lib.Api.Bitcoin.Alby in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.Alby.pas',
   IdeaL.Lib.Api.Bitcoin.DePIX in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.DePIX.pas',
-  IdeaL.Lib.Api.Bitcoin.DIGPIX in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.DIGPIX.pas';
+  IdeaL.Lib.Api.Bitcoin.DIGPIX in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.DIGPIX.pas',
+  IdeaL.Lib.Api.Bitcoin.Exchange in '..\..\Api\Bitcoin\IdeaL.Lib.Api.Bitcoin.Exchange.pas';
 
 var
   LRunner: ITestRunner;
